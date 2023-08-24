@@ -1,0 +1,19 @@
+Package: disR
+Title: What the Package Does (One Line, Title Case)
+Version: 0.0.0.9000
+Authors@R: 
+    person("Ryan", "Thomas", , "rythomas@usaid.gov", role = c("aut", "cre"),
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: This package facilitates summarizing and managing data extracts from the Development Information System, at the Implementing Mechanism level of disaggregation.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Depends: 
+    R (>= 2.10)
+Imports:
+    tidyverse,
+    openxlsx,
+    ggplot2
+LazyData: true
