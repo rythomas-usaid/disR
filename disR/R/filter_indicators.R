@@ -1,16 +1,13 @@
 #' Filter indicators with keywords
 #'
-#' @import tidyverse
-#'
-#'
+#' @import dplyr
 #' @export
 filter_indicators <- function(x, ic_1819 = NA, d1 = NA,
                                  d2 = NA, d3 = NA, d4 = NA, search=NA, ...) {
-requireNamespace(tidyverse)
 
   if (!is.na(search)) {
-    out <- x %>% filter(if_any(c("d1", "d2", "d3", "d4"),
-                 ~ str_detect(., regex(search, ignore.case=T))))
+    out <- x %>% dplyr::filter(if_any(c("d1", "d2", "d3", "d4"),
+                 ~ stringr::str_detect(., regex(search, ignore.case=T))))
   }
 
   # Single

@@ -15,5 +15,9 @@ Depends:
 Imports:
     tidyverse,
     openxlsx,
-    ggplot2
+    ggplot2,
+    magrittr
 LazyData: true
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
