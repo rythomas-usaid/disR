@@ -1,0 +1,205 @@
+---
+title: "Indicator Database Demo"
+author: "Ryan Thomas"
+date: "2023-08-04"
+output:
+  html_document:
+    df_print: paged
+---
+
+This document demonstrates how to use the indicator database to achieve two common challenges in FtF results reporting:
+
+-   Access multiple indicators for the same analysis, in this case, identifying implementing mechanisms that report on some indicators (hectares of cultivated land under improved management that use climate adaptive practices) to summarize a second set of indicators (number of producers using climate adaptive practices).
+
+-   Combine legacy indicators with current indicators
+
+First, we can load the necessary libraries and custom functions.
+
+```{r warning=F, message=F}
+options(scipen=999)
+
+library(tidyverse)
+library(openxlsx)
+
+# custom functions
+source("../functions/combine_indicators.R")
+source("../functions/sum_indicators.R")
+
+# path <- "__hidden__"
+load("../database/indicators_db.Rdata")
+```
+
+The specific question we need to answer is: how many producers using climate adaption management practices have been reported in implementing mechanisms IMs that also report hectares under climate adaptive management practices? The answer needs to be in a table with one row for each IM that meets the criteria, and a column for each year.
+
+This is a useful question for this demo because it requires combining information from two indicators, each of which has a legacy or retired indicator. Prior to the existence of this database, this task would require combining four Excel or Google Sheets files.
+
+# Access multiple indicators
+
+There are two methods of creating a `dataframe` that has the correct rows and columns to answer this question -- the filter method and the join method.
+
+## Filter method
+
+The filter method uses `indicator_df`, which contains all of the data from FY2022 and previous, and filters the data to only the indicators needed to answer this question.
+
+```{r}
+(filtered_indicators <- indicators_df %>%
+  
+  #Select all relevant indicator records
+  filter(
+    
+    # all these columns are in the indicators table
+    type == "Actual" & (
+      
+      # filter climate adaptive hectares disaggregates
+      (
+        if_any(c("d1", "d2", "d3", "d4"), 
+             ~ str_detect(., "Climate Adaptation")) &
+        d1 %in% c("Crop Land", "Cultivated Pasture", "Cultivated Land")
+        ) | # or -->
+        
+        # add climate adaptive producers 
+        (
+          ic %in% c("EG.3.2-24", "EG.3.2-x17") & 
+            str_detect(d3, "Climate Adaptation")
+          )
+      )
+    ) )
+```
+
+## Join method
+
+The join method uses multiple data tables organized like a relational database to build up the necessary columns. This method starts with the `indicators` table, which contains a unique combination of all disaggregated indicators.
+
+```{r}
+(joined_indicators <- indicators %>%
+  
+  #Select all the indicators you want
+  filter(
+    # find climate adaptation hectares indicators
+    (if_any(c("d1", "d2", "d3", "d4"), 
+             ~ str_detect(., "Climate Adaptation")) &
+       d1 %in% c("Crop Land", "Cultivated Pasture", "Cultivated Land")) |
+      
+        # add climate adaptation producers indicators
+        (ic %in% c("EG.3.2-24", "EG.3.2-x17") & 
+            str_detect(d3, "Climate Adaptation"))
+      ) %>%
+    
+  # Join **values** that are Actual using the indicators ID
+  left_join(x = ., y = filter(values, type=="Actual")
+            , by = join_by(id == id_ind)
+            , suffix = c("_disag", "_ind") # label variables with 
+            , keep = FALSE) %>%
+   
+   # Join **ims** table with IM details
+   left_join(x = ., y = ims
+              , by = join_by(id_im == id))) 
+```
+
+Both of these methods achieve slightly different, but suitable outputs to combine indicators. Since these indicators contain some data back to 2011, we need to bridge the FY18-FY19 years by combining data reported under legacy indicator codes. This requires contextual knowledge of the indicators.
+
+# Combine FY18-FY19 indicators
+
+To combine FY18-FY19 indicators, we can sum the values reported under each indicator for each IM in each year. To simplify the syntax, we have a custom function, `combine_indicators`, that combines FY18-FY19 indicators EG.3.2-24 /EG.3.2-x17 and EG.3.2-25 /EG.3.2-x18. The result will collapse duplicate rows and change the indicator code (`ic`) value so that it combines both indicator values with the new indicator number listed first. The function issues a warning because it assumes that all indicators can be summed. Since we do not have a factor name for the combined indicator, the function assigns a nickname to the indicator, `indicator_name`. In this case, any indicators with an `ic` containing EG.3.2-24 or EG.3.2-x17 has an `indicator_name` of "producer", while indicators with an `ic` containing EG.3.2-25 or EG.3.2-x18 has an `indicator_name` of "hectare". These are short-hand and not technically correct.
+
+```{r}
+# Summarize old and new indicators
+filtered_indicators %>%
+  combine_indicators(.groups="drop") # %>%
+  # distinct(year, ic) %>% arrange(year) 
+  # SANITY CHECK: there should only be combined values between 2018-2019
+```
+
+Next we have to filter producers using the reported values for hectares. e can do this by pivoting the table so that hectares and producers sit side-by-side, as columns for a given reporting organization, operating unit, activity code, and year. Then we can filter the rows based on the hectares column.
+
+```{r}
+(joined_indicators_wide <- joined_indicators %>%
+  combine_indicators(.groups="drop") %>%
+  
+  # Remove reporting years with hectares not greater than 0
+  # Put hectares side-by-side with producers for each ro, ou, code, and year
+  pivot_wider(id_cols = c(ro, ou, code, year)
+              , names_from = c("indicator_name")
+              , values_from = "value"
+              , values_fn = ~ sum(., na.rm=T)) %>%
+  ungroup() %>%
+  # filter by hectares
+  filter(hectares > 0))
+  
+```
+
+Below we summarize the data in an easy-to-read format for humans.
+
+```{r}
+joined_indicators_wide %>%
+  # Put years as columns for spreadsheet viewing
+  pivot_wider(id_cols = c(ro, ou, code)
+              , names_from = c("year")
+              , values_from = "producers"
+              , values_fn = ~ sum(., na.rm=T)) %>%
+  # Tidy up the order of columns for ease of reading.
+  relocate(c("2016", "2017", "2018", "2019", "2020", "2021", "2022")
+           , .after = everything())
+```
+
+
+## Summarize Total EG.3-2
+```{r}
+ind_code <- "EG.3-2"
+indicators %>%
+  sum_indicators(ind_code = ind_code, 
+                 reporting = "USAID", 
+                 ind_key = "Sex")
+```
+
+
+# Summary table with full code
+
+All of these operations can be strung together with a single, long piped operation.
+
+```{r}
+indicators %>%
+  
+  #Select all the indicators you want
+  filter(
+    # find climate adaptation hectares indicators
+    (if_any(c("d1", "d2", "d3", "d4"), 
+             ~ str_detect(., "Climate Adaptation")) &
+       d1 %in% c("Crop Land", "Cultivated Pasture", "Cultivated Land")) |
+      
+        # add climate adaptation producers indicators
+        (ic %in% c("EG.3.2-24", "EG.3.2-x17") & 
+            str_detect(d3, "Climate Adaptation"))
+      ) %>%
+    
+  # Join **values** that are Actual using the indicators ID
+  left_join(x = ., y = filter(values, type=="Actual")
+            , by = join_by(id == id_ind)
+            , suffix = c("_disag", "_ind") # label variables with 
+            , keep = FALSE) %>%
+   
+   # Join **ims** table with IM details
+   left_join(x = ., y = ims
+              , by = join_by(id_im == id)) %>%
+  
+  combine_indicators(.groups="drop") %>%
+  
+  # Remove reporting years with hectares not greater than 0
+  # Put hectares side-by-side with producers for each ro, ou, code, and year
+  pivot_wider(id_cols = c(ro, ou, code, year)
+              , names_from = c("indicator_name")
+              , values_from = "value"
+              , values_fn = ~ sum(., na.rm=T)) %>%
+  ungroup() %>%
+  # filter by hectares
+  filter(hectares > 0) %>%
+  
+  # Put years as columns for spreadsheet viewing
+  pivot_wider(id_cols = c(ro, ou, code)
+              , names_from = c("year")
+              , values_from = "producers"
+              , values_fn = ~ sum(., na.rm=T)) %>%
+  # Tidy up the order of columns for ease of reading.
+  relocate(c("FY2016", "FY2017", "FY2018", "FY2019", "FY2020", "FY2021", "FY2022"))
+           , .after = everything())
+```
