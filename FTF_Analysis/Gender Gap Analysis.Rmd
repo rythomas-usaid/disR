@@ -1,0 +1,134 @@
+---
+title: "Gender Gap analysis"
+author: "Ryan Thomas"
+date: "2023-09-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+load("../database/extract/indicators_db.Rdata")
+library(tidyverse)
+
+sum_ <- function(x) if(all(is.na(x))) NA_real_ else sum(x, na.rm=T)
+
+ppp <- read.csv("../API_PA.NUS.PPP_DS2_en_csv_v2_5734723.csv", skip = 4) %>%
+  select(-`Indicator.Name`,- `Indicator.Code`) %>%
+  pivot_longer(-c(`Country.Name`, `Country.Code`), 
+               names_to = "year", values_to = "ppp_multiplier") %>%
+  mutate(year = as.integer(str_remove(year, "X"))) %>%
+  filter(!is.na(ppp_multiplier))
+```
+
+## R Markdown
+
+```{r}
+ind_key <- "Sex"
+ind_code = "EG.3.2-27"
+udns <- unique_udns[unique_udns$indicator==ind_code,"udn"]
+```
+
+
+
+```{r}
+filter_indicators <- function(ind_code, udns=FALSE) {
+  if(isTRUE(udns)){
+    
+   udns <- unique_udns[unique_udns$indicator==ind_code,"udn"]
+
+     indicators %>%
+       #Select all the indicators you want
+       filter(str_detect(ic, ind_code) &  udn %in% udns) 
+     
+  } else if (!isTRUE(udns)) {
+    
+    indicators %>%
+       #Select all the indicators you want
+       filter(str_detect(ic, ind_code)) 
+    
+  }
+  
+}
+
+filter_indicators(ind_code = "EG.3.2-27", udns) %>%
+  mutate(unit = if_else(substr(udn, 5, 5) == "2", "Number"
+                , if_else(substr(udn, 5, 5) == "1", "Value","PROCESS"))) 
+```
+
+
+
+
+
+```{r}
+#### Replicating from Extract Database
+join_tables <- function(x) {
+  x %>% #distinct(udn)
+
+    # join values
+    left_join(x = ., y = values
+            , by = join_by(id == id_ind)
+            , suffix = c("_ind", "_val") # label variables
+            , keep = FALSE)  %>%
+    
+    # join activities details
+    left_join(activities
+              , by = join_by(id_ac == id)
+              , suffix = c("_ind", "_val") # label variables
+              , keep = FALSE)
+  }
+
+
+filter_indicators(ind_code = "EG.3.2-27", udns=TRUE) %>% 
+   
+  join_tables() %>%
+  left_join(ppp_countries) %>% 
+  relocate(Country.Code, .after=Disaggregate.Country) %>% #filter(Disaggregate.Country == "MALI")
+  left_join(ppp, join_by(Country.Code, year)) %>%
+  
+  
+ mutate(unit = if_else(substr(udn, 5, 5) == "2", "Number"
+                , if_else(substr(udn, 5, 5) == "1", "Value","PROCESS"))
+        , actual_ppp = if_else(unit == "Value",  actual * ppp_multiplier
+                               , actual)) %>%
+  
+  select(a_code, ro, ou, unit, Disaggregate.Name, Disaggregate.Country, Country.Code,
+         year, actual, actual_ppp) %>%
+  
+ 
+  pivot_wider(names_from = "unit", values_from = c("actual", "actual_ppp")
+              , values_fn = ~if(all(is.na(.))) NA_real_ else sum(., na.rm=T)) %>%
+  filter(if_all(ends_with("Value|Number"), ~ . > 0))
+```
+
+
+```{r}
+present_findings <- function(x, years) {
+   x %>%
+      pivot_wider(id_cols = c(ro, ou, a_code, Disaggregate.Country, year)
+                  , names_from = "Disaggregate.Name"
+                  , values_from = ends_with("Value|Number")
+                  , values_fn = ~ sum_(.)) %>% 
+  # mutate(ou = if_else(ou == "International Food Assistance Division (IFA) (USDA/IFA)" & 
+  #                       Disaggregate.Country == "Cambodia", "Cambodia (CAMBODIA)", ou)) %>%
+  filter(year %in% years) %>%
+  
+  group_by(ro, ou) %>%
+  summarize(across(ends_with("Male|Female")
+                   , ~ sum_(.)),
+            across(ends_with("Male|Female")
+                   , ~ sum_(.))) 
+}
+```
+
+
+
+
+
+
+```{r}
+"../output/gender_finance_gap_by_ac.xlsx"
+write.xlsx(gender_finance_gap_by_ac, file="../output/gender_finance_gap_by_ac.xlsx")
+write.xlsx(gender_finance_gap_by_ou,file="../output/gender_finance_gap_by_ou.xlsx")
+
+
+```
+

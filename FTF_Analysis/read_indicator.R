@@ -1,0 +1,210 @@
+#' Read Google Sheets data and select columns
+#'
+#' @import tidyverse
+#' @import openxlsx
+#'
+#' @export
+select_cols <- function(x, key) {
+  names(x)[apply(x, 2, function(r) any(r %in% key))]
+}
+
+
+
+read_indicator <- function(x, sheet = "IM Full Disaggs"){
+
+  require(openxlsx)
+  require(tidyverse)
+  print(paste0("reading ", x))
+
+  if("Indicator.Disaggregates:.4th.Order" %in%
+     colnames(read.xlsx(x, sheet))) {
+
+    read.xlsx(x,
+            sheet = sheet, fillMergedCells=T) %>%
+    rename(ro = RO,
+         ou = OU,
+         code = `Pa.Id`,
+         #year = `Fiscal Year`,
+         # target = Target,
+         #actual = Actual,
+         # deviation = Deviation,
+
+         ac_name = `Activity.Name`,
+         # status = `Activity Status`,
+         # start = `Activity Start Date`,
+         # end = `Activity End Date`,
+         # country = `Disaggregate Country`,
+         # frequency = `Indicator Collection Frequency`,
+         # period = `Collection Period Name`,
+         ic = `Indicator.Code`,
+         # ind_name = `Indicator Name`,
+         # udn = UDN,
+         # data_type = `Data Type`,
+         d1 = `Indicator.Disaggregates:.1st.Order`,
+         d2 = `Indicator.Disaggregates:.2nd.Order`,
+         d3 = `Indicator.Disaggregates:.3rd.Order`,
+         d4 = `Indicator.Disaggregates:.4th.Order`
+  ) %>%
+      #mutate(across(starts_with("Actual|Target"), is.numeric(.x))) %>%
+      filter(if_any(c("ic", "ro", "ou"), ~ !str_detect(., "Total")))  %>%
+      pivot_longer(starts_with("Actual") | starts_with("Target")) %>%
+      separate(name, into = c("type", "year")) %>%
+
+      mutate(group = case_when(if_any(everything(), ~ str_detect(., "^Sex")) ~ "Sex" ))
+
+
+  } else if("Indicator.Disaggregates:.3rd.Order" %in%
+            colnames(read.xlsx(x, sheet))) {
+
+    read.xlsx(x,
+              sheet = sheet, fillMergedCells=T) %>%
+      rename(ro = RO,
+             ou = OU,
+             code = `Pa.Id`,
+             #year = `Fiscal Year`,
+             # target = Target,
+             #actual = Actual,
+             # deviation = Deviation,
+
+             ac_name = `Activity.Name`,
+             # status = `Activity Status`,
+             # start = `Activity Start Date`,
+             # end = `Activity End Date`,
+             # country = `Disaggregate Country`,
+             # frequency = `Indicator Collection Frequency`,
+             # period = `Collection Period Name`,
+             ic = `Indicator.Code`,
+             # ind_name = `Indicator Name`,
+             # udn = UDN,
+             # data_type = `Data Type`,
+             d1 = `Indicator.Disaggregates:.1st.Order`,
+             d2 = `Indicator.Disaggregates:.2nd.Order`,
+             d3 = `Indicator.Disaggregates:.3rd.Order`,
+             # d4 = `Indicator.Disaggregates:.4th.Order`
+      ) %>%
+      #mutate(across(starts_with("Actual|Target"), is.numeric(.x))) %>%
+      filter(if_any(c("ic", "ro", "ou"), ~ !str_detect(., "Total")))  %>%
+      pivot_longer(starts_with("Actual") | starts_with("Target")) %>%
+      separate(name, into = c("type", "year")) %>%
+      mutate(across(select_sex_disaggs(.),
+                    .names = paste0("Sex_", select_sex_disaggs(.))))
+
+
+    } else if("Indicator.Disaggregates:.2nd.Order" %in%
+              colnames(read.xlsx(x, sheet ))) {
+
+      read.xlsx(x,
+                sheet = sheet, fillMergedCells=T) %>%
+      rename(ro = RO,
+             ou = OU,
+             code = `Pa.Id`,
+             #year = `Fiscal Year`,
+             # target = Target,
+             #actual = Actual,
+             # deviation = Deviation,
+
+             ac_name = `Activity.Name`,
+             # status = `Activity Status`,
+             # start = `Activity Start Date`,
+             # end = `Activity End Date`,
+             # country = `Disaggregate Country`,
+             # frequency = `Indicator Collection Frequency`,
+             # period = `Collection Period Name`,
+             ic = `Indicator.Code`,
+             # ind_name = `Indicator Name`,
+             # udn = UDN,
+             # data_type = `Data Type`,
+             d1 = `Indicator.Disaggregates:.1st.Order`,
+             d2 = `Indicator.Disaggregates:.2nd.Order`,
+             # d3 = `Indicator.Disaggregates:.3rd.Order`,
+             # d4 = `Indicator.Disaggregates:.4th.Order`
+      )  %>%
+        #mutate(across(starts_with("Actual|Target"), is.numeric(.x))) %>%
+        filter(if_any(c("ic", "ro", "ou"), ~ !str_detect(., "Total")))  %>%
+        pivot_longer(starts_with("Actual") | starts_with("Target")) %>%
+        separate(name, into = c("type", "year")) %>%
+        mutate(across(select_sex_disaggs(.),
+                      .names = paste0("Sex_", select_sex_disaggs(.))))
+
+  } else if("Indicator.Disaggregates:.1st.Order" %in%
+            colnames(read.xlsx(x, sheet))) {
+    read.xlsx(x,
+              sheet = sheet, fillMergedCells=T) %>%
+      rename(ro = RO,
+             ou = OU,
+             code = `Pa.Id`,
+             #year = `Fiscal Year`,
+             # target = Target,
+             #actual = Actual,
+             # deviation = Deviation,
+
+             ac_name = `Activity.Name`,
+             # status = `Activity Status`,
+             # start = `Activity Start Date`,
+             # end = `Activity End Date`,
+             # country = `Disaggregate Country`,
+             # frequency = `Indicator Collection Frequency`,
+             # period = `Collection Period Name`,
+             ic = `Indicator.Code`,
+             # ind_name = `Indicator Name`,
+             # udn = UDN,
+             # data_type = `Data Type`,
+             d1 = `Indicator.Disaggregates:.1st.Order`,
+             # d2 = `Indicator.Disaggregates:.2nd.Order`,
+             # d3 = `Indicator.Disaggregates:.3rd.Order`,
+             # d4 = `Indicator.Disaggregates:.4th.Order`
+      )  %>%
+      #mutate(across(starts_with("Actual|Target"), is.numeric(.x))) %>%
+      filter(if_any(c("ic", "ro", "ou"), ~ !str_detect(., "Total")))  %>%
+      pivot_longer(starts_with("Actual") | starts_with("Target")) %>%
+      separate(name, into = c("type", "year")) %>%
+      mutate(across(select_sex_disaggs(.),
+                  .names = paste0("Sex_", select_sex_disaggs(.))))
+
+    } else stop()
+
+}
+
+#################################
+# indicator_files[20]
+#
+# dat <- read.xlsx(paste0("../indicators/", indicator_files[20]),
+#                  sheet = "IM Full Disaggs", fillMergedCells=T) %>%
+#   rename(ro = RO,
+#          ou = OU,
+#          code = `Pa.Id`,
+#          #year = `Fiscal Year`,
+#          # target = Target,
+#          #actual = Actual,
+#          # deviation = Deviation,
+#
+#          ac_name = `Activity.Name`,
+#          # status = `Activity Status`,
+#          # start = `Activity Start Date`,
+#          # end = `Activity End Date`,
+#          # country = `Disaggregate Country`,
+#          # frequency = `Indicator Collection Frequency`,
+#          # period = `Collection Period Name`,
+#          ic = `Indicator.Code`,
+#          # ind_name = `Indicator Name`,
+#          # udn = UDN,
+#          # data_type = `Data Type`,
+#          d1 = `Indicator.Disaggregates:.1st.Order`,
+#          d2 = `Indicator.Disaggregates:.2nd.Order`,
+#          d3 = `Indicator.Disaggregates:.3rd.Order`,
+#          d4 = `Indicator.Disaggregates:.4th.Order`
+#   ) %>%
+#   #mutate(across(starts_with("Actual|Target"), is.numeric(.x))) %>%
+#   filter(if_any(c("ic", "ro", "ou"), ~ !str_detect(., "Total")))  %>%
+#   pivot_longer(starts_with("Actual") | starts_with("Target")) %>%
+#   separate(name, into = c("type", "year")) %>%
+#
+#   mutate(group = case_when(if_any(everything(), ~ str_detect(., "^Sex")) ~ "Sex" ))
+#
+# names(dat)[apply(dat, 2, function(r) any(str_detect(r, "^Sex")))]
+#
+# select_cols(dat, "Sex")
+# dat %>%
+#   mutate(sex = case_when(group == "Sex" & ))
+#
+# distinct(dat, d3)

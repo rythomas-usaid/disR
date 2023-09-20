@@ -1,0 +1,303 @@
+---
+title: "Progress Snapshot"
+author: "Ryan Thomas"
+date: "2023-08-23"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+# Load packages
+```{r warning=F, message=F}
+options(scipen=999)
+library(disR) # load data and custom functions
+library(tidyverse)
+library(openxlsx)
+sum_ <- function(x) if(all(is.na(x))) NA_real_ else sum(x, na.rm=T)
+
+```
+
+# Special functions
+```{r}
+join_values_ims_budgets <- function(x) {
+  x %>%
+     # Values
+  left_join(x = ., y = filter(values, type=="Actual")
+            , by = join_by(id == id_ind)
+            , suffix = c("_ind", "_val") # label variables 
+            , keep = FALSE)  %>% #distinct(year)
+  # IMs
+  left_join(ims, join_by(id_im == id)) %>%
+  filter(ro == "USAID" & year %in% paste0("FY", 2018:2023)) %>%
+  
+  group_by(ic_1819, ou, ro, year) %>%
+  summarise(value = sum(value, na.rm=T)) %>%
+  
+  # budgets
+  left_join(budgets, join_by(ou, year))
+}
+
+cultivated_land <- c("Crop Land", "Cultivated Pasture", "Cultivated Land"
+                     , "Aquaculture")
+climate_adaptive_cultivated_land <- c("Crop Land", "Cultivated Pasture"
+    , "Aquaculture", "Conservation/Protected Area"
+    , "Freshwater or Marine Ecosystems", "Rangeland", "Other")
+```
+
+
+```{r}
+budgets <- read.xlsx("../database/ou_E3_budget.xlsx") %>%
+  pivot_longer(-ou, names_to = "year", values_to = "budget") %>%
+  mutate(year = paste0("FY", year), budget = as.numeric(budget))
+```
+
+
+# EG.3.2-2
+```{r echo=F}
+filter_indicators(ic_1819 = "EG.3.2-2", search = "Sex") %>%  
+ join_values_ims_budgets()
+
+```
+
+
+# EG.3.2-24  Individuals
+```{r echo=F}
+individuals_by_budget <- filter_(indicators
+                                 , "EG.3.2-24/EG.3.2-x17"
+                                 , search = "Sex") %>%  
+  join_values_ims_budgets()
+
+write.xlsx(individuals_by_budget
+           , "../output/20230911_eg3.2-24_results per budget.xlsx")
+```
+
+
+```{r echo=F}
+options(scipen = 999)
+results_by_budget %>%
+  
+  ggplot(aes(value/1000, log(budget))) +
+  geom_point() +
+  #geom_smooth(method="lm") +
+  facet_wrap(year ~ . ) +
+  ggtitle("EG.3.2-24 Total People/ Firms Reached per $1000 \n USAID budget and results only") +
+  xlab("Number of People/ Firms reached") +
+  ylab("log(Budget)") +
+  ggplot2::theme(plot.title = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.subtitle = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.caption = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , text=element_text(size = 10, family = "Gill Sans MT", color = "black")
+                 , legend.position = "right"
+    ) +
+  ggplot2::scale_fill_manual(values = rep(c("#002F6C", "#BA0C2F", "#0067B9", "#6C6463", "#651D32", "#A7C6ED", "#8C8985"), 500)) +
+  ggplot2::scale_color_manual(values = rep(c("#002F6C", "#BA0C2F", "#0067B9", "#6C6463", "#651D32", "#A7C6ED", "#8C8985"), 500))
+#max(results_by_budget$value, na.rm = T)
+filter(results_by_budget, value == 4178350)
+``` 
+
+
+```{r}
+results_by_budget %>%
+  mutate(result_per_budget = value/budget) %>%
+  
+  ggplot(aes(result_per_budget, ou, col=year)) +
+  geom_point()  +
+   stat_summary(geom = "point",  fun.y = "mean", col = "black", size = 2
+                , shape = 24, fill = "NA") +
+  ggtitle("EG.3.2-24 Total People/ Firms Reached per $1000 \n USAID budget and results only") +
+  xlab("People/ Firms reached per $1000") +
+  ylab("Operating Unit") +
+  usaid_plot() +
+  ggplot2::theme(plot.title = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.subtitle = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.caption = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , text=element_text(size = 10, family = "Gill Sans MT", color = "black")
+                 , legend.position = "right"
+    ) +
+    guides(colour=guide_legend(order=1), shape=guide_legend(title=NULL, order=24))
+  
+
+```
+
+```{r}
+results_by_budget %>%
+  filter(ou != "Tanzania") %>%
+  mutate(result_per_budget = value/budget) %>%
+  
+  ggplot(aes(result_per_budget, ou, col=year)) +
+  geom_point()  +
+  ggtitle("EG.3.2-24 Total People/ Firms Reached per $1000 \n USAID budget and results only") +
+  xlab("People/ Firms reached per $1000") +
+  ylab("Operating Unit") +
+  usaid_plot() +
+  ggplot2::theme(plot.title = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.subtitle = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.caption = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , text=element_text(size = 10, family = "Gill Sans MT", color = "black")
+                 , legend.position = "right"
+    )
+```
+
+
+# EG.3.2-25 Hectares
+## Overall
+```{r echo=F}
+cultivated_hectares_per_budget <- 
+  filter_(indicators
+          ,"EG.3.2-25/EG.3.2-x18"
+          , search = "Sex") %>%
+  filter_(search = cultivated_land) %>% 
+  join_values_ims_budgets()
+```
+
+
+```{r echo=F}
+cultivated_hectares_per_budget %>%
+  
+  mutate(result_per_budget = value/budget) %>%
+  
+  ggplot(aes(result_per_budget, ou, col=year)) +
+  geom_point()  +
+   stat_summary(geom = "point",  fun.y = "mean", col = "black", size = 2
+                , shape = 24, fill = "NA") +
+  ggtitle("EG.3.2-25 Cultivated Land Hectares per $1000 \n USAID budget and results only") +
+  xlab("Cultivated Land Hectares per $1000") +
+  ylab("Operating Unit") +
+  usaid_plot() +
+  ggplot2::theme(plot.title = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.subtitle = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.caption = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , text=element_text(size = 10, family = "Gill Sans MT", color = "black")
+                 , legend.position = "right"
+    )
+ 
+```
+
+
+```{r}
+cultivated_hectares_per_budget %>%
+  
+  ggplot(aes(value/1000, log(budget))) +
+  geom_point() +
+  #geom_smooth(method="lm") +
+  facet_wrap(year ~ . ) +
+  ggtitle("EG.3.2-25 Cultivated Land Hectares\nUSAID budget and results only") +
+  xlab("Cultivated Land Hectares") +
+  ylab("log Budget (1000s)") +
+  ggplot2::theme(plot.title = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.subtitle = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.caption = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , text=element_text(size = 10, family = "Gill Sans MT", color = "black")
+                 , legend.position = "right"
+    ) +
+  ggplot2::scale_fill_manual(values = rep(c("#002F6C", "#BA0C2F", "#0067B9", "#6C6463", "#651D32", "#A7C6ED", "#8C8985"), 500)) +
+  ggplot2::scale_color_manual(values = rep(c("#002F6C", "#BA0C2F", "#0067B9", "#6C6463", "#651D32", "#A7C6ED", "#8C8985"), 500))
+```
+
+
+## Climate adaptive
+```{r  echo=F}
+climate_hectares_per_budget <- indicators %>%  #Select all the indicators you want
+  filter_(ic_1819="EG.3.2-25/EG.3.2-x18"
+          , search= c("Sex", "Climate Adaptation")) %>%
+  # filter(str_detect(d1, paste0(climate_adaptive_cultivated_land, collapse = "|")))
+  filter_(d1 = climate_adaptive_cultivated_land) %>%  
+  join_values_ims_budgets()
+  
+```
+
+```{r}
+climate_hectares_per_budget %>%
+  ggplot(aes(value/1000, log(budget))) +
+  geom_point() +
+  #geom_smooth(method="lm") +
+  facet_wrap(year ~ . ) +
+  ggtitle("EG.3.2-25 Climate Adaptive Hectares\nUSAID budget and results only") +
+  xlab("Climate Adaptive Hectares") +
+  ylab("log Budget (1000s)") +
+  ggplot2::theme(plot.title = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.subtitle = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , plot.caption = element_text(size = 12, family = "Gill Sans MT", color = "black")
+                   , text=element_text(size = 10, family = "Gill Sans MT", color = "black")
+                 , legend.position = "right"
+    ) +
+  ggplot2::scale_fill_manual(values = rep(c("#002F6C", "#BA0C2F", "#0067B9", "#6C6463", "#651D32", "#A7C6ED", "#8C8985"), 500)) +
+  ggplot2::scale_color_manual(values = rep(c("#002F6C", "#BA0C2F", "#0067B9", "#6C6463", "#651D32", "#A7C6ED", "#8C8985"), 500))
+```
+
+
+
+# EG.3.2-26 Sales Value
+```{r echo=F}
+ind_code <- "EG.3.2-26/EG.3.2-x19"
+ind_key <- "Sex"
+
+sales_value_per_budget <- indicators %>%  
+  #Select all the indicators you want
+  filter(str_detect(ic_1819, ind_code) &
+           if_any(everything(), ~str_detect(., ind_key)) &
+           if_any(d4, ~str_detect(., "Value of Sales"))) %>%  
+  join_values_ims_budgets()
+```
+
+
+```{r}
+sales_value_per_budget %>%
+  group_by(ic_1819, ou, ro) %>%
+  summarise(value = mean(value, na.rm=T)
+            , budget = mean(budget, na.rm=T))
+```
+
+
+
+# EG.3.2-27 Financing Value
+```{r echo = F}
+ind_code <- "EG.3.2-27/EG.3.2-x6"
+ind_key <- "Sex"
+value_of_financing_per_budet <- indicators %>%
+  #Select all the indicators you want
+  filter((str_detect(ic_1819, ind_code) &
+           if_any(everything(), ~str_detect(., ind_key)) &
+            if_any(everything(), ~ str_detect(., "Value"))) |
+           ic == "EG.3.2-x6" & str_detect(d1, "Sex")) %>%  
+  join_values_ims_budgets()
+```
+
+
+# EG.3.1-14/15 PSI
+```{r echo = F}
+ind_code <- "EG.3.1-14/-15"
+ind_key <- "Sex"
+psi_per_budget <- indicators %>%
+  #Select all the indicators you want
+  filter(str_detect(ic_1819, ind_code) & 
+           if_any(everything(), ~ str_detect(., "Private Sector"))) %>%  
+  join_values_ims_budgets()
+
+```
+
+# Join and format table
+```{r}
+mean_budget <- budgets %>% 
+  filter(year %in% paste0("FY", 2018:2022)) %>%
+  group_by(ou) %>%
+  summarise(budget = mean(budget, na.rm=T))
+
+results_per_budget <- bind_rows(individuals_by_budget
+          , cultivated_hectares_per_budget
+          , climate_hectares_per_budget
+          , sales_value_per_budget
+          , value_of_financing_per_budet
+          , psi_per_budget) %>%
+  filter(year %in% paste0("FY", 2018:2022)) %>%
+  group_by(ic_1819, ou) %>%
+  summarise(value = mean(value, na.rm=T))  %>%
+  pivot_wider(id_cols = ou, names_from = ic_1819, values_from = value) %>%
+  left_join(mean_budget, join_by(ou)) %>%
+  left_join(ftf_target_countries, join_by(ou==country)) %>%
+  filter(ftf_target == TRUE)
+
+write.xlsx(results_per_budget, "../output/20230911_18-22 mean results by mean budget.xlsx")
+```
+
