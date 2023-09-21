@@ -5,15 +5,3 @@ The data are stored on Google Drive for security purposes. You need authenticati
 
 The package includes a library of functions to search and summarize data for the Feed the Future Initiative. 
 
-.
-|- R
-| |-combine_indicators
-| |-fetch_data
-| |-filter_indicators
-| |-filter_udns
-| |-join_tables
-| |-print_udns
-| |-read_indicator
-| |-return_id
-| |-sum_
-| |-usaid_plot
