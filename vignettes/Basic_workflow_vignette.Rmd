@@ -1,0 +1,159 @@
+---
+title: "Basic workflow: Calculating Indicator Totals"
+author: "Ryan Thomas"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Basic workflow: Calculating Indicator Totals}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette demonstrates how to load and access indicator data using the `disR` package. 
+
+# Choose data set
+
+First we will load data contained in the package. There are two key data sets: `magnus` and `extract`. See the documentation for the data sets in [link]. In short, the `magnus` data set is a duplication of the tables we store on Google Drive, which have been reformatted from the data that we can extract from the DIS. The DIS data extract contains additional information, such as country disaggregates, which allows more flexible reporting on specific slices of the data. However, the format is less user friendly.
+
+## Using `magnus` data
+It is recommended to create a parent folder and clone the repo inside of the parent folder. Within the parent folder, create a dolcer called "downloads" to save data downloaded from Google Drive.
+|-Rscripts
+| |- downloads
+| |- disR
+
+With that file stricture, the following code will run. Otherwise, you will need to update the path variables below.
+
+Load required packages.
+```{r warning=F}
+library(disR)
+
+#library(tidyverse)
+#library(googledrive)
+```
+
+Download data and load it into the environment. To do this, you will need to authenticate into your `googledrive` account. You can do this once in an interactive session and `knit` the file to render it as long as you are authenticated in the session.
+```{r warning=F, "get magnus db"}
+# url <- "https://drive.google.com/file/d/1QV5bkqlscKDZIecVPMtr_gylL2FmujKc/view?usp=drive_link"
+# path <- "../../downloads/magnus.Rdata"
+# googledrive::drive_download(url, path = path, overwrite = T)
+load("../../downloads/magnus.Rdata")
+```
+
+With the `magnus` data set loaded, we can easily calculate indicator totals for common indicators, such as those in the progress snapshot. The following code shows how to sum the number of people who received USG-supported degree-granting non-nutritional-related food security training (`EG.3.2-2`) between 2011-2022.
+
+### Summarise EG.3.2-2 totals by year
+First select the indicator(s) and disaggregates that you want to sum.
+```{r echo=F, results='asis', "eg3.2-2 sex disaggs"}
+ind_code <- "EG.3.2-2"
+ind_key = "Sex"
+indicators %>%  #Select all the indicators you want
+      filter(ic_1819==ind_code &
+               if_any(everything(), ~str_detect(., ind_key))) %>%
+  knitr::kable()
+```
+
+Note that this data set does not contain much information about the indicators--only the name and disaggregates. We also need to join the values to these indicators to access the values. This is done using the `indicators$id` column in this table and the `values$id_ind` column in the values table.
+
+```{r}
+# replicate the lines from above
+indicators %>%  #Select all the indicators you want
+  filter(ic_1819==ind_code &
+           if_any(everything(), ~str_detect(., ind_key))) %>% 
+  
+  # join only the "actual" (not "target") values
+  left_join(x = ., y = filter(values, type=="Actual")
+            , by = join_by(id == id_ind)
+            , suffix = c("_ind", "_val")
+            , keep = FALSE)  %>% 
+  
+  # group by the variables you want in the output
+  group_by(Sex=d2, year) %>%
+  
+  # use the sum_ function, a wrapper that preserves NA vectors
+  summarise(value = sum_(value)) %>% 
+  
+  pivot_wider(names_from = c("year")
+              , values_from = "value"
+              , values_fn = ~ sum_(.)) %>%
+  knitr::kable()
+```
+
+## Using `extract` data set
+Sometimes we need to slice the data in ways that are not as easy to identify based on the disaggregates in the `magnus` data set. 
+
+```{r}
+rm(list = ls()) # remove objects
+# url <- "https://drive.google.com/file/d/1MAs5i-j7sMVFg_asZpb194_drDYdaxXS/view?usp=drive_link"
+# path <- "../../downloads/extract.Rdata"
+# googledrive::drive_download(url, path = path, overwrite = T)
+load("../../downloads/extract.Rdata")
+```
+
+An indicator analysis often starts with the indicator number. Analysts will typically know the indicator number, but the structure of the disaggregates is varied and often a bottleneck in analysis. To access and browse the disaggregates
+```{r}
+print_udns("EG.3.2-27") 
+```
+
+
+```{r}
+filter_udns("EG.3.2-27", "Sex of recipient(s)") %>%
+  knitr::kable()
+```
+
+
+```{r}
+filter_indicators("EG.3.2-27", "Sex of recipient(s)") %>%
+  # truncate for vignette
+  head(20) %>%
+  knitr::kable()
+```
+
+
+```{r}
+filter_indicators("EG.3.2-27", "Sex of recipient(s)") %>% 
+  join_tables() %>%
+  # truncate for vignette
+  head(20) %>%
+  knitr::kable()
+```
+
+This can enable a much more complex analysis, like comparing the nominal values of sales data that IPs collect to the private purchasing power parity data published by the World Bank. The code chunk below demonstrates that analysis. More documentation may be added later.
+```{r}
+filter_indicators("EG.3.2-27", "Sex of recipient(s)") %>% 
+ join_tables() %>%
+  left_join(ppp_countries) %>% 
+  relocate(Country.Code, .after=Disaggregate.Country) %>% 
+  left_join(prvt_pp, suffix = c("",".prvt_pp"), join_by(Country.Code, closest(year >= year))) %>% 
+  left_join(exch_rate, suffix = c("",".exch_rate"), join_by(Country.Code, closest(year >= year))) %>% 
+  
+  filter(year %in% 2020:2022) %>%
+  
+
+  mutate(Disaggregate.Name = case_when(
+    ic == "EG.3.2-27" & substr(udn, 5, 5) == "2" ~ paste(Disaggregate.Name, "Number")
+    , ic == "EG.3.2-27" & substr(udn, 5, 5) == "1" ~ paste(Disaggregate.Name, "Value"))
+    #, actual_lc = case_when(str_detect(Disaggregate.Name, "Value") ~  actual * exch_rate)
+    , actual_prvt = case_when(str_detect(Disaggregate.Name, "Value") ~ actual * (exch_rate / prvt_pp))) %>%
+  
+  select(a_code, ro, ou, Disaggregate.Name, Disaggregate.Country
+         , Country.Code, year, nom=actual, actual_prvt) %>%
+  #filter(across(if_all(c("nominal", "pppv"), ~ is.na(.))))
+  pivot_longer(c(nom, actual_prvt), names_to = "type", values_to = "value") %>%
+  
+  arrange(year, Disaggregate.Name, type) %>% #distinct(Disaggregate.Name, type)
+  filter(!is.na(value)) %>%
+  
+  # truncate for vignette
+  head(20) %>%
+  knitr::kable()
+
+```
+
+
