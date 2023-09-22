@@ -23,7 +23,8 @@ This vignette demonstrates how to load and access indicator data using the `disR
 First we will load data contained in the package. There are two key data sets: `magnus` and `extract`. See the documentation for the data sets in [link]. In short, the `magnus` data set is a duplication of the tables we store on Google Drive, which have been reformatted from the data that we can extract from the DIS. The DIS data extract contains additional information, such as country disaggregates, which allows more flexible reporting on specific slices of the data. However, the format is less user friendly.
 
 ## Using `magnus` data
-It is recommended to create a parent folder and clone the repo inside of the parent folder. Within the parent folder, create a dolcer called "downloads" to save data downloaded from Google Drive.
+It is recommended to create a parent folder and clone the repo inside of the parent folder. Within the parent folder, create a folder called "downloads" to save data downloaded from Google Drive.
+
 |-Rscripts
 | |- downloads
 | |- disR
@@ -41,9 +42,9 @@ library(disR)
 Download data and load it into the environment. To do this, you will need to authenticate into your `googledrive` account. You can do this once in an interactive session and `knit` the file to render it as long as you are authenticated in the session.
 ```{r warning=F, "get magnus db"}
 # url <- "https://drive.google.com/file/d/1QV5bkqlscKDZIecVPMtr_gylL2FmujKc/view?usp=drive_link"
-# path <- "../../downloads/magnus.Rdata"
+# path <- "../downloads/magnus.Rdata"
 # googledrive::drive_download(url, path = path, overwrite = T)
-load("../../downloads/magnus.Rdata")
+load("../downloads/magnus.Rdata") # Just noting that if this file is opened from the vignettes folder and no directory is defined, the folder will become the director and the file name won't work, so you need to remove a level or set a pointer up to the next folder level
 ```
 
 With the `magnus` data set loaded, we can easily calculate indicator totals for common indicators, such as those in the progress snapshot. The following code shows how to sum the number of people who received USG-supported degree-granting non-nutritional-related food security training (`EG.3.2-2`) between 2011-2022.
@@ -93,7 +94,7 @@ rm(list = ls()) # remove objects
 # url <- "https://drive.google.com/file/d/1MAs5i-j7sMVFg_asZpb194_drDYdaxXS/view?usp=drive_link"
 # path <- "../../downloads/extract.Rdata"
 # googledrive::drive_download(url, path = path, overwrite = T)
-load("../../downloads/extract.Rdata")
+load("../downloads/extract.Rdata") # see comment above
 ```
 
 An indicator analysis often starts with the indicator number. Analysts will typically know the indicator number, but the structure of the disaggregates is varied and often a bottleneck in analysis. To access and browse the disaggregates

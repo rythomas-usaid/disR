@@ -12,7 +12,7 @@
 
 <meta name="author" content="Ryan Thomas" />
 
-<meta name="date" content="2023-09-20" />
+<meta name="date" content="2023-09-22" />
 
 <title>Basic workflow: Calculating Indicator Totals</title>
 
@@ -341,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Basic workflow: Calculating Indicator
 Totals</h1>
 <h4 class="author">Ryan Thomas</h4>
-<h4 class="date">2023-09-20</h4>
+<h4 class="date">2023-09-22</h4>
 
 
 
@@ -361,46 +361,38 @@ user friendly.</p>
 <div id="using-magnus-data" class="section level2">
 <h2>Using <code>magnus</code> data</h2>
 <p>It is recommended to create a parent folder and clone the repo inside
-of the parent folder. Within the parent folder, create a dolcer called
-“downloads” to save data downloaded from Google Drive. |-Rscripts | |-
-downloads | |- disR</p>
+of the parent folder. Within the parent folder, create a folder called
+“downloads” to save data downloaded from Google Drive.</p>
+<p>|-Rscripts | |- downloads | |- disR</p>
 <p>With that file stricture, the following code will run. Otherwise, you
 will need to update the path variables below.</p>
 <p>Load required packages.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(disR)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ✔ dplyr     1.1.3     ✔ readr     2.1.4</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ✔ forcats   1.0.0     ✔ stringr   1.5.0</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ✔ ggplot2   3.4.3     ✔ tibble    3.2.1</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ✔ lubridate 1.9.2     ✔ tidyr     1.3.0</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ✔ purrr     1.0.1     </span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ✖ dplyr::filter() masks stats::filter()</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ✖ dplyr::lag()    masks stats::lag()</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(googledrive)</span></code></pre></div>
-<p>Download data and load it into the environment.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>extract_url <span class="ot">&lt;-</span> <span class="st">&quot;https://drive.google.com/file/d/1MAs5i-j7sMVFg_asZpb194_drDYdaxXS/view?usp=drive_link&quot;</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>magnus_url <span class="ot">&lt;-</span> <span class="st">&quot;https://drive.google.com/file/d/1QV5bkqlscKDZIecVPMtr_gylL2FmujKc/view?usp=drive_link&quot;</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>googledrive<span class="sc">::</span><span class="fu">drive_download</span>(magnus_url, <span class="st">&quot;../downloads/magnus.Rdata&quot;</span>, <span class="at">overwrite =</span> T)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ! Using an auto-discovered, cached token.</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   To suppress this message, modify your code or options to clearly consent to</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   the use of a cached token.</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   See gargle&#39;s &quot;Non-interactive auth&quot; vignette for more details:</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;https://gargle.r-lib.org/articles/non-interactive-auth.html&gt;</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ℹ The googledrive package is using a cached token for &#39;rythomas@usaid.gov&#39;.</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; File downloaded:</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • &#39;magnus.Rdata&#39; &lt;id: 1QV5bkqlscKDZIecVPMtr_gylL2FmujKc&gt;</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Saved locally as:</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • &#39;../downloads/magnus.Rdata&#39;</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>googledrive<span class="sc">::</span><span class="fu">drive_download</span>(extract_url, <span class="st">&quot;../downloads/extract.Rdata&quot;</span>, <span class="at">overwrite =</span> T)</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; File downloaded:</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • &#39;extract.Rdata&#39; &lt;id: 1MAs5i-j7sMVFg_asZpb194_drDYdaxXS&gt;</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Saved locally as:</span></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • &#39;../downloads/extract.Rdata&#39;</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">&quot;../downloads/magnus.Rdata&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(disR)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co">#&gt; Loading required package: tidyverse</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">#&gt; ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#&gt; ✔ dplyr     1.1.2     ✔ readr     2.1.4</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co">#&gt; ✔ forcats   1.0.0     ✔ stringr   1.5.0</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co">#&gt; ✔ ggplot2   3.4.3     ✔ tibble    3.2.1</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co">#&gt; ✔ lubridate 1.9.2     ✔ tidyr     1.3.0</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co">#&gt; ✔ purrr     1.0.2     </span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co">#&gt; ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt; ✖ dplyr::filter() masks stats::filter()</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt; ✖ dplyr::lag()    masks stats::lag()</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt; ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt; Loading required package: openxlsx</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co">#&gt; Loading required package: googledrive</span></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co">#library(tidyverse)</span></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="co">#library(googledrive)</span></span></code></pre></div>
+<p>Download data and load it into the environment. To do this, you will
+need to authenticate into your <code>googledrive</code> account. You can
+do this once in an interactive session and <code>knit</code> the file to
+render it as long as you are authenticated in the session.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># url &lt;- &quot;https://drive.google.com/file/d/1QV5bkqlscKDZIecVPMtr_gylL2FmujKc/view?usp=drive_link&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co"># path &lt;- &quot;../downloads/magnus.Rdata&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># googledrive::drive_download(url, path = path, overwrite = T)</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">load</span>(<span class="st">&quot;../downloads/magnus.Rdata&quot;</span>) <span class="co"># Just noting that if this file is opened from the vignettes folder and no directory is defined, the folder will become the director and the file name won&#39;t work, so you need to remove a level or set a pointer up to the next folder level</span></span></code></pre></div>
 <p>With the <code>magnus</code> data set loaded, we can easily calculate
 indicator totals for common indicators, such as those in the progress
 snapshot. The following code shows how to sum the number of people who
@@ -471,29 +463,29 @@ indicators–only the name and disaggregates. We also need to join the
 values to these indicators to access the values. This is done using the
 <code>indicators$id</code> column in this table and the
 <code>values$id_ind</code> column in the values table.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># replicate the lines from above</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>indicators <span class="sc">%&gt;%</span>  <span class="co">#Select all the indicators you want</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ic_1819<span class="sc">==</span>ind_code <span class="sc">&amp;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>           <span class="fu">if_any</span>(<span class="fu">everything</span>(), <span class="sc">~</span><span class="fu">str_detect</span>(., ind_key))) <span class="sc">%&gt;%</span> </span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># join only the &quot;actual&quot; (not &quot;target&quot;) values</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="at">x =</span> ., <span class="at">y =</span> <span class="fu">filter</span>(values, type<span class="sc">==</span><span class="st">&quot;Actual&quot;</span>)</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            , <span class="at">by =</span> <span class="fu">join_by</span>(id <span class="sc">==</span> id_ind)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>            , <span class="at">suffix =</span> <span class="fu">c</span>(<span class="st">&quot;_ind&quot;</span>, <span class="st">&quot;_val&quot;</span>)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>            , <span class="at">keep =</span> <span class="cn">FALSE</span>)  <span class="sc">%&gt;%</span> </span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># group by the variables you want in the output</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="at">Sex=</span>d2, year) <span class="sc">%&gt;%</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># use the sum_ function, a wrapper that preserves NA vectors</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">sum_</span>(value)) <span class="sc">%&gt;%</span> </span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="fu">c</span>(<span class="st">&quot;year&quot;</span>)</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>              , <span class="at">values_from =</span> <span class="st">&quot;value&quot;</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>              , <span class="at">values_fn =</span> <span class="sc">~</span> <span class="fu">sum_</span>(.)) <span class="sc">%&gt;%</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; `summarise()` has grouped output by &#39;Sex&#39;. You can override using the `.groups`</span></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; argument.</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># replicate the lines from above</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>indicators <span class="sc">%&gt;%</span>  <span class="co">#Select all the indicators you want</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="fu">filter</span>(ic_1819<span class="sc">==</span>ind_code <span class="sc">&amp;</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>           <span class="fu">if_any</span>(<span class="fu">everything</span>(), <span class="sc">~</span><span class="fu">str_detect</span>(., ind_key))) <span class="sc">%&gt;%</span> </span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  </span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="co"># join only the &quot;actual&quot; (not &quot;target&quot;) values</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="at">x =</span> ., <span class="at">y =</span> <span class="fu">filter</span>(values, type<span class="sc">==</span><span class="st">&quot;Actual&quot;</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>            , <span class="at">by =</span> <span class="fu">join_by</span>(id <span class="sc">==</span> id_ind)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>            , <span class="at">suffix =</span> <span class="fu">c</span>(<span class="st">&quot;_ind&quot;</span>, <span class="st">&quot;_val&quot;</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>            , <span class="at">keep =</span> <span class="cn">FALSE</span>)  <span class="sc">%&gt;%</span> </span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  </span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="co"># group by the variables you want in the output</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="at">Sex=</span>d2, year) <span class="sc">%&gt;%</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  </span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="co"># use the sum_ function, a wrapper that preserves NA vectors</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">sum_</span>(value)) <span class="sc">%&gt;%</span> </span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  </span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="fu">c</span>(<span class="st">&quot;year&quot;</span>)</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>              , <span class="at">values_from =</span> <span class="st">&quot;value&quot;</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>              , <span class="at">values_fn =</span> <span class="sc">~</span> <span class="fu">sum_</span>(.)) <span class="sc">%&gt;%</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; `summarise()` has grouped output by &#39;Sex&#39;. You can override using the `.groups`</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; argument.</span></span></code></pre></div>
 <table>
 <colgroup>
 <col width="25%" />
@@ -582,196 +574,2055 @@ values to these indicators to access the values. This is done using the
 <p>Sometimes we need to slice the data in ways that are not as easy to
 identify based on the disaggregates in the <code>magnus</code> data
 set.</p>
-</div>
-<div id="figures" class="section level2">
-<h2>Figures</h2>
-<p>The figure sizes have been customised so that you can easily put two
-images side-by-side.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="dv">10</span><span class="sc">:</span><span class="dv">1</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># You can enable figure captions by `fig_caption: yes` in YAML:</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#     output:</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">#       rmarkdown::html_vignette:</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">#         fig_caption: yes</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Then you can use the chunk option `fig.cap = &quot;Your figure caption.&quot;` in **knitr**.</span></span></code></pre></div>
-<p><img src="data:image/png;base64,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" /><img src="data:image/png;base64,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" /></p>
-</div>
-<div id="more-examples" class="section level2">
-<h2>More Examples</h2>
-<table style="width:100%;">
-<colgroup>
-<col width="25%" />
-<col width="7%" />
-<col width="5%" />
-<col width="8%" />
-<col width="5%" />
-<col width="7%" />
-<col width="8%" />
-<col width="8%" />
-<col width="4%" />
-<col width="4%" />
-<col width="7%" />
-<col width="7%" />
-</colgroup>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">rm</span>(<span class="at">list =</span> <span class="fu">ls</span>()) <span class="co"># remove objects</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># url &lt;- &quot;https://drive.google.com/file/d/1MAs5i-j7sMVFg_asZpb194_drDYdaxXS/view?usp=drive_link&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co"># path &lt;- &quot;../../downloads/extract.Rdata&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># googledrive::drive_download(url, path = path, overwrite = T)</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="fu">load</span>(<span class="st">&quot;../downloads/extract.Rdata&quot;</span>) <span class="co"># see comment above</span></span></code></pre></div>
+<p>An indicator analysis often starts with the indicator number.
+Analysts will typically know the indicator number, but the structure of
+the disaggregates is varied and often a bottleneck in analysis. To
+access and browse the disaggregates</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">print_udns</span>(<span class="st">&quot;EG.3.2-27&quot;</span>) </span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; # A tibble: 174 × 4</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;    ic        Disaggregate.Name                                uudn  udn_formulas</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt;    &lt;chr&gt;     &lt;chr&gt;                                            &lt;chr&gt; &lt;list&gt;      </span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt;  1 EG.3.2-27 Value of agriculture-related financing accessed… EG.3… &lt;chr [1]&gt;   </span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt;  2 EG.3.2-27 TOTAL VALUE of financing received by recipient … EG.3… &lt;chr [3]&gt;   </span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt;  3 EG.3.2-27 Size of recipient(s)                             EG.3… &lt;chr [1]&gt;   </span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt;  4 EG.3.2-27 Individuals / Microenterprises                   EG.3… &lt;chr [3]&gt;   </span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt;  5 EG.3.2-27 Small and Medium Enterprises                     EG.3… &lt;chr [3]&gt;   </span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;  6 EG.3.2-27 Large Enterprises and Corporations               EG.3… &lt;chr [3]&gt;   </span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;  7 EG.3.2-27 Disaggregates Not Available                      EG.3… &lt;chr [3]&gt;   </span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;  8 EG.3.2-27 Sex of recipient(s)                              EG.3… &lt;chr [1]&gt;   </span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;  9 EG.3.2-27 Male                                             EG.3… &lt;chr [3]&gt;   </span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 10 EG.3.2-27 Female                                           EG.3… &lt;chr [3]&gt;   </span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; # ℹ 164 more rows</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">filter_udns</span>(<span class="st">&quot;EG.3.2-27&quot;</span>, <span class="st">&quot;Sex of recipient(s)&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span></code></pre></div>
+<table>
 <thead>
 <tr class="header">
-<th align="left"></th>
-<th align="right">mpg</th>
-<th align="right">cyl</th>
-<th align="right">disp</th>
-<th align="right">hp</th>
-<th align="right">drat</th>
-<th align="right">wt</th>
-<th align="right">qsec</th>
-<th align="right">vs</th>
-<th align="right">am</th>
-<th align="right">gear</th>
-<th align="right">carb</th>
+<th align="left">x</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">Mazda RX4</td>
-<td align="right">21.0</td>
-<td align="right">6</td>
-<td align="right">160.0</td>
-<td align="right">110</td>
-<td align="right">3.90</td>
-<td align="right">2.620</td>
-<td align="right">16.46</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">4</td>
-<td align="right">4</td>
+<td align="left">EG.3.2-27_3.5.1.2.1</td>
 </tr>
 <tr class="even">
-<td align="left">Mazda RX4 Wag</td>
-<td align="right">21.0</td>
-<td align="right">6</td>
-<td align="right">160.0</td>
-<td align="right">110</td>
-<td align="right">3.90</td>
-<td align="right">2.875</td>
-<td align="right">17.02</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">4</td>
-<td align="right">4</td>
+<td align="left">EG.3.2-27_3.5.1.2.2</td>
 </tr>
 <tr class="odd">
-<td align="left">Datsun 710</td>
-<td align="right">22.8</td>
-<td align="right">4</td>
-<td align="right">108.0</td>
-<td align="right">93</td>
-<td align="right">3.85</td>
-<td align="right">2.320</td>
-<td align="right">18.61</td>
-<td align="right">1</td>
-<td align="right">1</td>
-<td align="right">4</td>
-<td align="right">1</td>
+<td align="left">EG.3.2-27_3.5.1.2.3</td>
 </tr>
 <tr class="even">
-<td align="left">Hornet 4 Drive</td>
-<td align="right">21.4</td>
-<td align="right">6</td>
-<td align="right">258.0</td>
-<td align="right">110</td>
-<td align="right">3.08</td>
-<td align="right">3.215</td>
-<td align="right">19.44</td>
-<td align="right">1</td>
-<td align="right">0</td>
-<td align="right">3</td>
-<td align="right">1</td>
+<td align="left">EG.3.2-27_3.5.1.2.4</td>
 </tr>
 <tr class="odd">
-<td align="left">Hornet Sportabout</td>
-<td align="right">18.7</td>
-<td align="right">8</td>
-<td align="right">360.0</td>
-<td align="right">175</td>
-<td align="right">3.15</td>
-<td align="right">3.440</td>
-<td align="right">17.02</td>
-<td align="right">0</td>
-<td align="right">0</td>
-<td align="right">3</td>
-<td align="right">2</td>
+<td align="left">EG.3.2-27_3.5.1.2.5</td>
 </tr>
 <tr class="even">
-<td align="left">Valiant</td>
-<td align="right">18.1</td>
-<td align="right">6</td>
-<td align="right">225.0</td>
-<td align="right">105</td>
-<td align="right">2.76</td>
-<td align="right">3.460</td>
-<td align="right">20.22</td>
-<td align="right">1</td>
-<td align="right">0</td>
-<td align="right">3</td>
-<td align="right">1</td>
+<td align="left">EG.3.2-27_3.5.2.2.1</td>
 </tr>
 <tr class="odd">
-<td align="left">Duster 360</td>
-<td align="right">14.3</td>
-<td align="right">8</td>
-<td align="right">360.0</td>
-<td align="right">245</td>
-<td align="right">3.21</td>
-<td align="right">3.570</td>
-<td align="right">15.84</td>
-<td align="right">0</td>
-<td align="right">0</td>
-<td align="right">3</td>
-<td align="right">4</td>
+<td align="left">EG.3.2-27_3.5.2.2.2</td>
 </tr>
 <tr class="even">
-<td align="left">Merc 240D</td>
-<td align="right">24.4</td>
-<td align="right">4</td>
-<td align="right">146.7</td>
-<td align="right">62</td>
-<td align="right">3.69</td>
-<td align="right">3.190</td>
-<td align="right">20.00</td>
-<td align="right">1</td>
-<td align="right">0</td>
-<td align="right">4</td>
-<td align="right">2</td>
+<td align="left">EG.3.2-27_3.5.2.2.3</td>
 </tr>
 <tr class="odd">
-<td align="left">Merc 230</td>
-<td align="right">22.8</td>
-<td align="right">4</td>
-<td align="right">140.8</td>
-<td align="right">95</td>
-<td align="right">3.92</td>
-<td align="right">3.150</td>
-<td align="right">22.90</td>
-<td align="right">1</td>
-<td align="right">0</td>
-<td align="right">4</td>
-<td align="right">2</td>
+<td align="left">EG.3.2-27_3.5.2.2.4</td>
 </tr>
 <tr class="even">
-<td align="left">Merc 280</td>
-<td align="right">19.2</td>
-<td align="right">6</td>
-<td align="right">167.6</td>
-<td align="right">123</td>
-<td align="right">3.92</td>
-<td align="right">3.440</td>
-<td align="right">18.30</td>
-<td align="right">1</td>
+<td align="left">EG.3.2-27_3.5.2.2.5</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.1</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.3</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.4</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.5</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.2.2.1</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.2.2.2</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.2.2.3</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.2.2.4</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.2.2.5</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.7.1.2.1</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.7.1.2.2</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.7.1.2.3</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.7.1.2.4</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.7.1.2.5</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.7.2.2.1</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.7.2.2.2</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.7.2.2.3</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.7.2.2.4</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.7.2.2.5</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">filter_indicators</span>(<span class="st">&quot;EG.3.2-27&quot;</span>, <span class="st">&quot;Sex of recipient(s)&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="co"># truncate for vignette</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">20</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="5%" />
+<col width="2%" />
+<col width="2%" />
+<col width="2%" />
+<col width="3%" />
+<col width="2%" />
+<col width="5%" />
+<col width="6%" />
+<col width="5%" />
+<col width="8%" />
+<col width="6%" />
+<col width="6%" />
+<col width="4%" />
+<col width="4%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="5%" />
+<col width="2%" />
+<col width="8%" />
+<col width="3%" />
+<col width="3%" />
+<col width="2%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">uudn</th>
+<th align="left">id</th>
+<th align="left">ic</th>
+<th align="left">udn</th>
+<th align="left">d_end</th>
+<th align="left">d_start</th>
+<th align="left">Disaggregate.Code</th>
+<th align="left">Disaggregate.Commodity</th>
+<th align="left">Disaggregate.Country</th>
+<th align="left">Disaggregate.Data.Entry.Type</th>
+<th align="left">Disaggregate.Data.Type</th>
+<th align="left">Disaggregate.Name</th>
+<th align="left">Indicator.Origin</th>
+<th align="left">Indicator.Tags</th>
+<th align="left">Is.FTF</th>
+<th align="left">Is.PPR</th>
+<th align="left">Is.PMP</th>
+<th align="left">Is.Neither.PPR.PMP</th>
+<th align="left">Is.COVID</th>
+<th align="left">Indicator.Collection.Frequency</th>
+<th align="left">i_end</th>
+<th align="left">udn_formulas</th>
+<th align="left">Formula</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.5.2.2.1</td>
+<td align="left">0009292</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.2.2.1</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.2.2.1</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Male</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.2.2.1</td>
+<td align="left">0009298</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.2.2.1</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.2.2.1</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Male</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.5.1.2.1</td>
+<td align="left">0009300</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.1.2.1</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.1.2.1</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Male</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.5.1.2.2</td>
+<td align="left">0009301</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.1</td>
+<td align="left">0009303</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.1</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.1</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Male</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.2.2.2</td>
+<td align="left">0009305</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.2.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.2.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.5.2.2.2</td>
+<td align="left">0009307</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.2.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.2.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009311</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Zimbabwe</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.1</td>
+<td align="left">0009313</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.1</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.1</td>
+<td align="left"></td>
+<td align="left">Zimbabwe</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Male</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.5.1.2.2</td>
+<td align="left">0019376</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.1.2.2</td>
+<td align="left"></td>
+<td align="left">Rwanda</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.2.2.1</td>
+<td align="left">0020479</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.2.2.1</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.2.2.1</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Male</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.7.2.2.2</td>
+<td align="left">0020485</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.7.2.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.7.2.2.2</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.7.2.2.3</td>
+<td align="left">0020486</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.7.2.2.3</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.7.2.2.3</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Mixed (for enterprises)</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.5.2.2.2</td>
+<td align="left">0020487</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.2.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.2.2.2</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.5.1.2.3</td>
+<td align="left">0020489</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.1.2.3</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.1.2.3</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Mixed (for enterprises)</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.5.2.2.3</td>
+<td align="left">0020495</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.5.2.2.3</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.5.2.2.3</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Mixed (for enterprises)</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0020499</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.7.1.2.3</td>
+<td align="left">0020500</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.7.1.2.3</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.7.1.2.3</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Mixed (for enterprises)</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.2.2.3</td>
+<td align="left">0020501</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.2.2.3</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.2.2.3</td>
+<td align="left"></td>
+<td align="left">Nigeria</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Mixed (for enterprises)</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">filter_indicators</span>(<span class="st">&quot;EG.3.2-27&quot;</span>, <span class="st">&quot;Sex of recipient(s)&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="fu">join_tables</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="co"># truncate for vignette</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">20</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span></code></pre></div>
+<table>
+<colgroup>
+<col width="2%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="2%" />
+<col width="3%" />
+<col width="3%" />
+<col width="4%" />
+<col width="3%" />
+<col width="2%" />
+<col width="2%" />
+<col width="2%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="3%" />
+<col width="1%" />
+<col width="4%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="0%" />
+<col width="1%" />
+<col width="0%" />
+<col width="1%" />
+<col width="1%" />
+<col width="0%" />
+<col width="3%" />
+<col width="1%" />
+<col width="13%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="1%" />
+<col width="0%" />
+<col width="1%" />
+<col width="3%" />
+<col width="1%" />
+<col width="1%" />
+<col width="3%" />
+<col width="1%" />
+<col width="1%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">uudn</th>
+<th align="left">id</th>
+<th align="left">ic</th>
+<th align="left">udn</th>
+<th align="left">d_end</th>
+<th align="left">d_start</th>
+<th align="left">Disaggregate.Code</th>
+<th align="left">Disaggregate.Commodity</th>
+<th align="left">Disaggregate.Country</th>
+<th align="left">Disaggregate.Data.Entry.Type</th>
+<th align="left">Disaggregate.Data.Type</th>
+<th align="left">Disaggregate.Name</th>
+<th align="left">Indicator.Origin</th>
+<th align="left">Indicator.Tags</th>
+<th align="left">Is.FTF_ind</th>
+<th align="left">Is.PPR_ind</th>
+<th align="left">Is.PMP_ind</th>
+<th align="left">Is.Neither.PPR.PMP_ind</th>
+<th align="left">Is.COVID_ind</th>
+<th align="left">Indicator.Collection.Frequency</th>
+<th align="left">i_end</th>
+<th align="left">udn_formulas</th>
+<th align="left">Formula</th>
+<th align="left">id_val</th>
+<th align="left">id_ac</th>
+<th align="left">id_off</th>
+<th align="right">year</th>
+<th align="right">actual</th>
+<th align="right">target</th>
+<th align="left">ro</th>
+<th align="left">ou</th>
+<th align="right">a_code</th>
+<th align="left">a_name</th>
+<th align="left">ip</th>
+<th align="left">a_end</th>
+<th align="left">a_start</th>
+<th align="left">a_office</th>
+<th align="left">status</th>
+<th align="left">tags</th>
+<th align="left">Is.COVID_val</th>
+<th align="left">Is.Disaggregate.Blank</th>
+<th align="left">Is.FTF_val</th>
+<th align="left">Is.IPS</th>
+<th align="left">Is.Neither.PPR.PMP_val</th>
+<th align="left">Is.PMP_val</th>
+<th align="left">Is.PPR_val</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">00047566</td>
+<td align="left">01595</td>
+<td align="left">011</td>
+<td align="right">2020</td>
+<td align="right">61560</td>
 <td align="right">0</td>
-<td align="right">4</td>
-<td align="right">4</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1617</td>
+<td align="left">FTF Bangladesh Rice and Diversified Crops</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">12/12/2021</td>
+<td align="left">7/13/2016</td>
+<td align="left">EG</td>
+<td align="left">Closed</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">00047612</td>
+<td align="left">01595</td>
+<td align="left">011</td>
+<td align="right">2021</td>
+<td align="right">641697</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1617</td>
+<td align="left">FTF Bangladesh Rice and Diversified Crops</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">12/12/2021</td>
+<td align="left">7/13/2016</td>
+<td align="left">EG</td>
+<td align="left">Closed</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">00591847</td>
+<td align="left">05864</td>
+<td align="left">011</td>
+<td align="right">2020</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1615</td>
+<td align="left">FTF Bangladesh Livestock Production for Improved
+Nutrition</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">12/31/9999</td>
+<td align="left">6/15/2015</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">00898902</td>
+<td align="left">05864</td>
+<td align="left">011</td>
+<td align="right">2021</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1615</td>
+<td align="left">FTF Bangladesh Livestock Production for Improved
+Nutrition</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">12/31/9999</td>
+<td align="left">6/15/2015</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">00918390</td>
+<td align="left">06996</td>
+<td align="left">011</td>
+<td align="right">2022</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">4553</td>
+<td align="left">Feed the Future Bangladesh Livestock and Nutrition
+Activity</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">9/14/2026</td>
+<td align="left">9/15/2021</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01036867</td>
+<td align="left">06996</td>
+<td align="left">011</td>
+<td align="right">2023</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">4553</td>
+<td align="left">Feed the Future Bangladesh Livestock and Nutrition
+Activity</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">9/14/2026</td>
+<td align="left">9/15/2021</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01065831</td>
+<td align="left">06996</td>
+<td align="left">011</td>
+<td align="right">2024</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">4553</td>
+<td align="left">Feed the Future Bangladesh Livestock and Nutrition
+Activity</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">9/14/2026</td>
+<td align="left">9/15/2021</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01224844</td>
+<td align="left">06996</td>
+<td align="left">011</td>
+<td align="right">2021</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">4553</td>
+<td align="left">Feed the Future Bangladesh Livestock and Nutrition
+Activity</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">9/14/2026</td>
+<td align="left">9/15/2021</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01291195</td>
+<td align="left">02571</td>
+<td align="left">011</td>
+<td align="right">2022</td>
+<td align="right">NA</td>
+<td align="right">0</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1613</td>
+<td align="left">CSISA MEA - Cereal Systems Initiative in South Asia -
+Mechanization and Extension Activity</td>
+<td align="left"></td>
+<td align="left">9/30/2024</td>
+<td align="left">10/1/2019</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01294905</td>
+<td align="left">06996</td>
+<td align="left">011</td>
+<td align="right">2025</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">4553</td>
+<td align="left">Feed the Future Bangladesh Livestock and Nutrition
+Activity</td>
+<td align="left">ACDI/VOCA</td>
+<td align="left">9/14/2026</td>
+<td align="left">9/15/2021</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01650697</td>
+<td align="left">06258</td>
+<td align="left">011</td>
+<td align="right">2020</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1613</td>
+<td align="left">CSISA MEA - Cereal Systems Initiative in South Asia -
+Mechanization and Extension Activity</td>
+<td align="left"></td>
+<td align="left">9/30/2024</td>
+<td align="left">10/1/2019</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01667132</td>
+<td align="left">06258</td>
+<td align="left">011</td>
+<td align="right">2021</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1613</td>
+<td align="left">CSISA MEA - Cereal Systems Initiative in South Asia -
+Mechanization and Extension Activity</td>
+<td align="left"></td>
+<td align="left">9/30/2024</td>
+<td align="left">10/1/2019</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01676684</td>
+<td align="left">10261</td>
+<td align="left">004</td>
+<td align="right">2021</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1607</td>
+<td align="left">49723: COMPLETED ACTIVITY - TO BE HIDDEN - Agriculture
+Mechanization and Irrigation</td>
+<td align="left"></td>
+<td align="left">12/31/9999</td>
+<td align="left">6/25/2013</td>
+<td align="left">NONE</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01676790</td>
+<td align="left">10261</td>
+<td align="left">004</td>
+<td align="right">2022</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1607</td>
+<td align="left">49723: COMPLETED ACTIVITY - TO BE HIDDEN - Agriculture
+Mechanization and Irrigation</td>
+<td align="left"></td>
+<td align="left">12/31/9999</td>
+<td align="left">6/25/2013</td>
+<td align="left">NONE</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01677160</td>
+<td align="left">10261</td>
+<td align="left">004</td>
+<td align="right">2023</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1607</td>
+<td align="left">49723: COMPLETED ACTIVITY - TO BE HIDDEN - Agriculture
+Mechanization and Irrigation</td>
+<td align="left"></td>
+<td align="left">12/31/9999</td>
+<td align="left">6/25/2013</td>
+<td align="left">NONE</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01677762</td>
+<td align="left">10261</td>
+<td align="left">004</td>
+<td align="right">2020</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1607</td>
+<td align="left">49723: COMPLETED ACTIVITY - TO BE HIDDEN - Agriculture
+Mechanization and Irrigation</td>
+<td align="left"></td>
+<td align="left">12/31/9999</td>
+<td align="left">6/25/2013</td>
+<td align="left">NONE</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01678443</td>
+<td align="left">10261</td>
+<td align="left">004</td>
+<td align="right">2024</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1607</td>
+<td align="left">49723: COMPLETED ACTIVITY - TO BE HIDDEN - Agriculture
+Mechanization and Irrigation</td>
+<td align="left"></td>
+<td align="left">12/31/9999</td>
+<td align="left">6/25/2013</td>
+<td align="left">NONE</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01678613</td>
+<td align="left">10261</td>
+<td align="left">004</td>
+<td align="right">2025</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1607</td>
+<td align="left">49723: COMPLETED ACTIVITY - TO BE HIDDEN - Agriculture
+Mechanization and Irrigation</td>
+<td align="left"></td>
+<td align="left">12/31/9999</td>
+<td align="left">6/25/2013</td>
+<td align="left">NONE</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="odd">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01680580</td>
+<td align="left">06258</td>
+<td align="left">011</td>
+<td align="right">2023</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1613</td>
+<td align="left">CSISA MEA - Cereal Systems Initiative in South Asia -
+Mechanization and Extension Activity</td>
+<td align="left"></td>
+<td align="left">9/30/2024</td>
+<td align="left">10/1/2019</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+<tr class="even">
+<td align="left">EG.3.2-27_3.6.1.2.2</td>
+<td align="left">0009291</td>
+<td align="left">EG.3.2-27</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left">12/31/9999</td>
+<td align="left">10/1/2019</td>
+<td align="left">3.6.1.2.2</td>
+<td align="left"></td>
+<td align="left">Bangladesh</td>
+<td align="left">Entry</td>
+<td align="left">Integer</td>
+<td align="left">Female</td>
+<td align="left">FTF</td>
+<td align="left"></td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Annual</td>
+<td align="left">12/31/9999</td>
+<td align="left">NA</td>
+<td align="left">Manual</td>
+<td align="left">01681616</td>
+<td align="left">06258</td>
+<td align="left">011</td>
+<td align="right">2024</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">USAID</td>
+<td align="left">Bangladesh (BANGLADESH)</td>
+<td align="right">1613</td>
+<td align="left">CSISA MEA - Cereal Systems Initiative in South Asia -
+Mechanization and Extension Activity</td>
+<td align="left"></td>
+<td align="left">9/30/2024</td>
+<td align="left">10/1/2019</td>
+<td align="left">EG</td>
+<td align="left">Ongoing</td>
+<td align="left"></td>
+<td align="left">N</td>
+<td align="left">Y</td>
+<td align="left">Y</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">N</td>
+<td align="left">Y</td>
+</tr>
+</tbody>
+</table>
+<p>This can enable a much more complex analysis, like comparing the
+nominal values of sales data that IPs collect to the private purchasing
+power parity data published by the World Bank. The code chunk below
+demonstrates that analysis. More documentation may be added later.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">filter_indicators</span>(<span class="st">&quot;EG.3.2-27&quot;</span>, <span class="st">&quot;Sex of recipient(s)&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a> <span class="fu">join_tables</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="fu">left_join</span>(ppp_countries) <span class="sc">%&gt;%</span> </span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="fu">relocate</span>(Country.Code, <span class="at">.after=</span>Disaggregate.Country) <span class="sc">%&gt;%</span> </span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="fu">left_join</span>(prvt_pp, <span class="at">suffix =</span> <span class="fu">c</span>(<span class="st">&quot;&quot;</span>,<span class="st">&quot;.prvt_pp&quot;</span>), <span class="fu">join_by</span>(Country.Code, <span class="fu">closest</span>(year <span class="sc">&gt;=</span> year))) <span class="sc">%&gt;%</span> </span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="fu">left_join</span>(exch_rate, <span class="at">suffix =</span> <span class="fu">c</span>(<span class="st">&quot;&quot;</span>,<span class="st">&quot;.exch_rate&quot;</span>), <span class="fu">join_by</span>(Country.Code, <span class="fu">closest</span>(year <span class="sc">&gt;=</span> year))) <span class="sc">%&gt;%</span> </span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  </span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">%in%</span> <span class="dv">2020</span><span class="sc">:</span><span class="dv">2022</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  </span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Disaggregate.Name =</span> <span class="fu">case_when</span>(</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>    ic <span class="sc">==</span> <span class="st">&quot;EG.3.2-27&quot;</span> <span class="sc">&amp;</span> <span class="fu">substr</span>(udn, <span class="dv">5</span>, <span class="dv">5</span>) <span class="sc">==</span> <span class="st">&quot;2&quot;</span> <span class="sc">~</span> <span class="fu">paste</span>(Disaggregate.Name, <span class="st">&quot;Number&quot;</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>    , ic <span class="sc">==</span> <span class="st">&quot;EG.3.2-27&quot;</span> <span class="sc">&amp;</span> <span class="fu">substr</span>(udn, <span class="dv">5</span>, <span class="dv">5</span>) <span class="sc">==</span> <span class="st">&quot;1&quot;</span> <span class="sc">~</span> <span class="fu">paste</span>(Disaggregate.Name, <span class="st">&quot;Value&quot;</span>))</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>    <span class="co">#, actual_lc = case_when(str_detect(Disaggregate.Name, &quot;Value&quot;) ~  actual * exch_rate)</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>    , <span class="at">actual_prvt =</span> <span class="fu">case_when</span>(<span class="fu">str_detect</span>(Disaggregate.Name, <span class="st">&quot;Value&quot;</span>) <span class="sc">~</span> actual <span class="sc">*</span> (exch_rate <span class="sc">/</span> prvt_pp))) <span class="sc">%&gt;%</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>  </span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>  <span class="fu">select</span>(a_code, ro, ou, Disaggregate.Name, Disaggregate.Country</span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>         , Country.Code, year, <span class="at">nom=</span>actual, actual_prvt) <span class="sc">%&gt;%</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>  <span class="co">#filter(across(if_all(c(&quot;nominal&quot;, &quot;pppv&quot;), ~ is.na(.))))</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">c</span>(nom, actual_prvt), <span class="at">names_to =</span> <span class="st">&quot;type&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>  </span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>  <span class="fu">arrange</span>(year, Disaggregate.Name, type) <span class="sc">%&gt;%</span> <span class="co">#distinct(Disaggregate.Name, type)</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(value)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>  </span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>  <span class="co"># truncate for vignette</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">20</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; Joining with `by = join_by(Disaggregate.Country)`</span></span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="4%" />
+<col width="3%" />
+<col width="36%" />
+<col width="22%" />
+<col width="13%" />
+<col width="8%" />
+<col width="3%" />
+<col width="3%" />
+<col width="4%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">a_code</th>
+<th align="left">ro</th>
+<th align="left">ou</th>
+<th align="left">Disaggregate.Name</th>
+<th align="left">Disaggregate.Country</th>
+<th align="left">Country.Code</th>
+<th align="right">year</th>
+<th align="left">type</th>
+<th align="right">value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1470</td>
+<td align="left">USAID</td>
+<td align="left">Tanzania (TANZANIA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Tanzania</td>
+<td align="left">TZA</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="right">1471</td>
+<td align="left">USAID</td>
+<td align="left">Tanzania (TANZANIA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Tanzania</td>
+<td align="left">TZA</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">219805</td>
+</tr>
+<tr class="odd">
+<td align="right">2579</td>
+<td align="left">USDA</td>
+<td align="left">International Food Assistance Division (IFA)
+(USDA/IFA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Ethiopia</td>
+<td align="left">ETH</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">209</td>
+</tr>
+<tr class="even">
+<td align="right">1745</td>
+<td align="left">USAID</td>
+<td align="left">Ethiopia (ETHIOPIA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Ethiopia</td>
+<td align="left">ETH</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">13</td>
+</tr>
+<tr class="odd">
+<td align="right">2075</td>
+<td align="left">USAID</td>
+<td align="left">Bureau for Resilience and Food Security (RFS)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">_Multi-region/Global</td>
+<td align="left"></td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">1287</td>
+<td align="left">USAID</td>
+<td align="left">Zimbabwe (ZIMBABWE)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Zimbabwe</td>
+<td align="left">ZWE</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">1286</td>
+<td align="left">USAID</td>
+<td align="left">Zimbabwe (ZIMBABWE)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Zimbabwe</td>
+<td align="left">ZWE</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">234</td>
+</tr>
+<tr class="even">
+<td align="right">2333</td>
+<td align="left">USAID</td>
+<td align="left">Senegal (SENEGAL)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Senegal</td>
+<td align="left">SEN</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">1675</td>
+<td align="left">USAID</td>
+<td align="left">Senegal (SENEGAL)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Senegal</td>
+<td align="left">SEN</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">576</td>
+</tr>
+<tr class="even">
+<td align="right">2204</td>
+<td align="left">USAID</td>
+<td align="left">West Africa Regional Program (WARP)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Senegal</td>
+<td align="left">SEN</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">2400</td>
+<td align="left">USAID</td>
+<td align="left">Zambia (ZAMBIA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Zambia</td>
+<td align="left">ZMB</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">10101</td>
+</tr>
+<tr class="even">
+<td align="right">1924</td>
+<td align="left">USAID</td>
+<td align="left">Burma (BURMA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Burma</td>
+<td align="left">MMR</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">546</td>
+</tr>
+<tr class="odd">
+<td align="right">1937</td>
+<td align="left">USAID</td>
+<td align="left">Burma (BURMA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Burma</td>
+<td align="left">MMR</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">9</td>
+</tr>
+<tr class="even">
+<td align="right">1521</td>
+<td align="left">USAID</td>
+<td align="left">Georgia (GEORGIA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Georgia</td>
+<td align="left">GEO</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">3338</td>
+</tr>
+<tr class="odd">
+<td align="right">2586</td>
+<td align="left">USDA</td>
+<td align="left">International Food Assistance Division (IFA)
+(USDA/IFA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Georgia</td>
+<td align="left">GEO</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">89</td>
+</tr>
+<tr class="even">
+<td align="right">2204</td>
+<td align="left">USAID</td>
+<td align="left">West Africa Regional Program (WARP)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Nigeria</td>
+<td align="left">NGA</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">1561</td>
+<td align="left">USAID</td>
+<td align="left">India (INDIA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">India</td>
+<td align="left">IND</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">1190</td>
+<td align="left">USAID</td>
+<td align="left">Rwanda (RWANDA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Rwanda</td>
+<td align="left">RWA</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">35</td>
+</tr>
+<tr class="odd">
+<td align="right">1190</td>
+<td align="left">USAID</td>
+<td align="left">Rwanda (RWANDA)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Rwanda</td>
+<td align="left">RWA</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">2204</td>
+<td align="left">USAID</td>
+<td align="left">West Africa Regional Program (WARP)</td>
+<td align="left">Disaggregates Not Available Number</td>
+<td align="left">Senegal</td>
+<td align="left">SEN</td>
+<td align="right">2020</td>
+<td align="left">nom</td>
+<td align="right">0</td>
 </tr>
 </tbody>
 </table>
