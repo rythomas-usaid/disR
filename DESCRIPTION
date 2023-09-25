@@ -15,10 +15,13 @@ Depends:
     tidyverse,
     openxlsx,
     googledrive,
-    dplyr
+    googlesheets4,
+    dplyr,
+    extrafont
 Imports:
     tidyverse,
     openxlsx,
     ggplot2,
-    magrittr
+    magrittr,
+    extrafont
 
