@@ -1,0 +1,532 @@
+---
+title: "FTF Briefer: Leveling off smallholder farmer participation in FY2022"
+author: "RFS/PAE/ADL/Data and Analytics Team"
+output:
+  bookdown::word_document2: default
+---
+
+```{r include=F}
+options(scipen=999, big.mark = ",")
+library(disR) # load data and custom functions
+library(tidyverse)
+load("../../data/basic.Rdata")
+values <- values %>% filter(year %in% paste0("FY", 2018:2022))
+
+# regions <- googlesheets4::read_sheet("https://docs.google.com/spreadsheets/d/1F9tBLSwCumX75IY59fnKRx_PehDeCQhi4lIojgqQEQE/edit#gid=2016971268")
+# 
+# googledrive::drive_create(name = "EG.3-2 Smallholder Analysis"
+#                           , path = "https://drive.google.com/drive/folders/1aCC361Feq2USdw1KGt1AZXUsjxu21ICZ"
+#                           , type = "spreadsheet")
+
+# Select all the indicators you want
+inds <- indicators %>%
+  # Filter indicators containing "EG.3-2" in the 'ic' column
+  filter(str_detect(ic,  "EG.3-2") &
+         # Filter indicators where 'd1' is either "Type of Individuals Participating"
+         # or "Sex of Individuals Participating"
+         (d2 == "People in USG-Assisted Private Sector Firms"))
+
+# Create a new data frame 'sex_disaggs' by further filtering 'inds' where 'd1' is "Sex of Individuals Participating"
+# and then select distinct values in the 'd2' column
+sex_disaggs <-inds %>%
+  filter(d1 == "Sex of Individuals Participating") %>%
+  distinct(d2)
+```
+
+```{r  include=F}
+# Merge 'inds' with 'values' data based on 'id' and 'id_ind'
+# while keeping only rows where 'type' is "Actual"
+# and label the columns with "_ind" and "_val" suffixes
+# Note: 'distinct(year)' is commented out
+headcount <- inds %>%
+  left_join(x = ., y = filter(values, type == "Actual"),
+            by = join_by(id == id_ind),
+            suffix = c("_ind", "_val"), # Label variables
+            keep = FALSE) %>%
+  # Distinct(year) is commented out
+  # left_join with 'ims' data based on 'id_im' and 'id'
+  left_join(x = ., y = ims,
+            by = join_by(id_im == id)) 
+
+
+correct_headcount <- function(x) {
+    warning("Assuming you have filtered to the correct columns!")
+  x %>% # Group the data by specified columns and calculate the sum of 'value'
+   # Reshape the data from long to wide format with 'ic' as column names
+  select(-ic_1819) %>% pivot_wider(names_from = ic, values_from = value) %>%
+  # Create a new column 'Hybrid' based on conditions
+  
+  rename( IM_Level_Sum = `EG.3-2`
+         , OU_Level = `EG.3-2_OULevel`)
+}
+
+correct_ou_level <- function(x) {
+  x %>%  
+    group_by(ro, ou, d1, d2,  year) %>% #arrange( ro, ou, d1, d2, year) %>% filter(n()>1)
+  summarise(across(c(IM_Level_Sum, OU_Level), ~ sum_(.))
+                     , .groups = "drop") %>%
+  mutate(Hybrid_OULevel = case_when(is.na(OU_Level) ~ IM_Level_Sum,
+                               !is.na(OU_Level) ~ OU_Level)) 
+}
+
+```
+
+```{r echo=F, include = F, warning = F}
+headcount_im <- headcount %>% #set_disaggs() %>%
+  correct_headcount()
+
+headcount_ou <- headcount %>% #set_disaggs() %>%
+  correct_headcount() %>%
+  correct_ou_level()
+
+headcount_ou
+```
+
+
+ 
+# Multiple ways to measure participation in FtF
+
+Feed the Future reporting is designed to measure participation at the **Activity/IM level** to aid in adaptive management, though this focus on the activity poses challenges to aggregating participation numbers to the level of operating unit or the initiative overall. Participants can work with multiple USAID activities and each activity should count that individual, resulting in a (purposeful) over counting. To correct for over counting in the activity level values, initiative level reporting uses a twin indicator, `EG.3-2_OULevel`, which is manually de-duplicated by USAID Mission/OU staff. The manual de-duplication has seen growing, but still inconsistent compliance, leading the ADL/Data & Analytics Team to use a hybrid approach to calculate participation. The hybrid approach uses the OU level value where it is available and substitutes the sum of activity level values for missing OU level data. Figure \@ref(fig:method-comp) shows the results of using four different approaches to calculating OU participation:
+
+1.  `IM_Level_Sum` is the sum of the Activity/IM values.
+
+2.  `OU_level` is the de-duplicated value reported by OUs/Missions, which is sometimes missing.
+
+3.  `Hybrid_OULevel` uses the `EG.3-2_OULevel` indicator when it is present and, if it is missing, substitutes the sum of the `EG.3-2` indicator at the Activity/IM-level.
+
+Figure  \@ref(fig:method-comp) shows the difference between the three measurements in a line chart. The OU level *should* be lower than the sum of the IM-level values in every case, leading to a lower overall headcount across IMs that report both figures. We can see from Figure \@ref(fig:method-comp) that the `OU Level` count of smallholder farmers and total participants converged with the `EG.3-2` sum of IM-level figures in FY2022. In FY2022, three USAID operating units did not report OU-level figures--Bangladesh, Rwanda, and Ethiopia.
+
+
+```{r method-comp, echo=F, fig.width = 7.5}
+headcount_ou %>% 
+  #filter(ro == "USAID") %>%
+  mutate(lower.bound = pmin(IM_Level_Sum, OU_Level, Hybrid_OULevel, na.rm=T)
+         , upper.bound = pmax(IM_Level_Sum, OU_Level, Hybrid_OULevel, na.rm=T)
+         , year = str_remove(year, "FY") %>% as.numeric()) %>%
+  
+  group_by(d2, year) %>%
+  summarize(across(
+    c(IM_Level_Sum, OU_Level, Hybrid_OULevel, lower.bound, upper.bound)
+    , ~ sum_(.))
+    , .groups = "drop") %>%
+  
+  pivot_longer(cols = c(IM_Level_Sum, OU_Level, Hybrid_OULevel)) %>%
+
+   # Create a ggplot visualization:
+  ggplot(aes(year, value, color =  name)) +  # Set x and y variables, and color by 'name'
+  geom_ribbon(aes(ymin = lower.bound, ymax = upper.bound), alpha = 0.1) +
+  geom_line(stat = "summary", linewidth = 1) +
+  facet_grid(. ~ d2) +  # Create a faceted plot based on 'd2'
+
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+  theme(panel.spacing = unit(2, "lines")) + 
+  scale_y_continuous(labels = scales::comma) +
+  # TODO: change title text size and facet label text size to smaller
+  ggtitle("Comparison of multiple ways to aggregate reported values"
+          , subtitle = "Grey area represents the miniumum and maximum estimates\nOU_Level falls outside this because it only includes compliant USAID OUs")   # Set plot title
+
+```
+
+The remainder of the briefer reports on the trends in smallholder participation using the best available data--the hybrid OU values or the Activity/IM-level sum depending on the appropriate level of disaggregation.
+
+# Trends in smallholder farmer participation
+
+The largest increase in the total number of participants in FtF occurred after FY2018, presumably due to increased reporting compliance. Smallholder farmer participation has increased at a slower rate than the increase in overall participation, and dropped in absolute terms in the latest fiscal year.USAID/Nigeria’s reporting carries a heavy weight for the participation in FY2022. Figure \@ref(fig:trend-bar) below shows the change over time in participation including a breakdown with USAID/Nigeria, other large reporters, and other OUs. USAID/Nigeria alone reported nearly 8 million participants in FY2022, inflating the total number of participants from 27.7 million to 35.3 million, and increasing the number of smallholders from 4.4 million to 6.9 million. The table and figure below show the same information. The figure provides an overview at a glance, while the Table \@ref(tab:trends-sans-nigeria-table) provides the detailed figures.
+
+
+```{r trend-bar, echo = F, include = F, fig.width = 7.5}
+plot_group <- c("Bureau for Resilience and Food Security (RFS)" #, "Banglagesh"
+                , "Tanzania", "Ethiopia", "Ghana")
+
+headcount_ou %>%
+  # Modify the 'year' column: Remove "FY" and convert to numeric
+  mutate(year = str_remove(year, "FY") %>% as.numeric()) %>%
+  filter(d2 == "Producer: Smallholder Farmer") %>%
+  mutate(group = if_else(ou %in% plot_group, paste(plot_group, collapse="\n"),
+                         if_else(ou == "Nigeria", "Nigeria", "Other OUs"))) %>%
+  # Create a ggplot visualization:
+  ggplot(aes(year, Hybrid_OULevel, fill = group, group = group)) +  # Set x and y variables, and color by 'name'
+  geom_bar(stat = "summary", fun = sum_, na.rm = TRUE, position="stack") +  # Add a line plot with sum summary statistic
+  #facet_grid(. ~ d2) +  # Create a faceted plot based on 'd2'
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+    scale_y_continuous(labels = scales::comma) +
+
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+  ggtitle(paste("Hybrid count of smallholder participants")) + # Set plot title
+  theme(legend.position = "bottom")
+```
+```{r trend-sans-nigeria, echo=F, fig.width = 7.5, include=F}
+p1 <- headcount_ou %>% set_disaggs() %>%
+  mutate(year = str_remove(year, "FY") %>% as.numeric())  %>%
+  ggplot(aes(year, Hybrid_OULevel, color = d2)) +
+  geom_line(stat="summary", fun=sum_, na.rm = T, linewidth = 1) +
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+  theme(legend.position = "bottom") +
+  scale_y_continuous(labels = scales::comma, limits = c(0, 4e7)) +
+
+  guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  ggtitle("Hybrid count of total and smallholder participants"
+          , subtitle = "All ROs and OUs")  # Set plot title
+
+
+p2 <- headcount_ou %>% set_disaggs() %>% filter(ro == "USAID") %>%
+  mutate(year = str_remove(year, "FY") %>% as.numeric())  %>%
+  ggplot(aes(year, Hybrid_OULevel, color = d2)) +
+  geom_line(stat="summary", fun=sum_, na.rm = T, linewidth = 1) +
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+   theme(legend.position = "bottom") +
+  scale_y_continuous(labels = scales::comma, limits = c(0, 4e7)) +
+
+   guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  # TODO: shrink title text
+  
+  ggtitle("...", subtitle = "USAID only, all OUs")  # Set plot title
+
+p3 <- headcount_ou %>% set_disaggs() %>% filter(ou != "Nigeria") %>%
+  mutate(year = str_remove(year, "FY") %>% as.numeric())  %>%
+  ggplot(aes(year, Hybrid_OULevel, color = d2)) +
+  geom_line(stat="summary", fun=sum_, na.rm = T, linewidth = 1) +
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+   theme(legend.position = "bottom") +
+  scale_y_continuous(labels = scales::comma, limits = c(0, 4e7)) +
+
+   guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  # TODO: shrink title text
+  
+  ggtitle("...", subtitle = "All ROs, excluding Nigeria")  # Set plot title
+
+p4 <- headcount_ou %>% set_disaggs() %>% filter(ro == "USAID" & ou != "Nigeria") %>%
+  mutate(year = str_remove(year, "FY") %>% as.numeric())  %>%
+  ggplot(aes(year, Hybrid_OULevel, color = d2)) +
+  geom_line(stat="summary", fun=sum_, na.rm = T, linewidth = 1) +
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+   theme(legend.position = "bottom") +
+  scale_y_continuous(labels = scales::comma, limits = c(0, 4e7)) +
+
+   guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  # TODO: shrink title text
+  
+  ggtitle("...", subtitle = "USAID only, excluding Nigeria")  # Set plot title
+
+
+
+gridExtra::grid.arrange(p1, p2, p3, p4, nrow = 2)
+
+```
+```{r trends-sans-nigeria-table, echo = F}
+bind_rows({
+  headcount_ou %>% set_disaggs() %>% arrange(year) %>% 
+    pivot_wider(id_cols = d2, names_from = year
+                , values_from = Hybrid_OULevel, values_fn = sum_) %>%
+        rename(Disaggregate=d2) %>%
+    mutate(Group="All OUs", .before= everything())
+}, {
+headcount_ou %>% set_disaggs() %>% arrange(year) %>% 
+    filter(!(ro == "USAID" & ou == "Nigeria")) %>%
+  pivot_wider(id_cols = d2, names_from = year
+              , values_from = Hybrid_OULevel, values_fn = sum_) %>%
+    rename(Disaggregate=d2) %>%
+    mutate(Group="Excluding Nigeria", .before= everything())
+}) %>%
+  knitr::kable(format.args = list(big.mark = ","))
+
+```
+
+
+Conversely, the majority of the reduction in participation comes from four key operating units—-RFS, Tanzania, Ethiopia, and Ghana. These four OUs accounted for about 50% of the total smallholder farmers in FY2021, but only about 25% in FY2022, as shouwn in Figure \@ref(fig:losers). 
+
+```{r losers, echo=F, fig.width = 7.5}
+p1 <- headcount_ou %>%
+  # Modify the 'year' column: Remove "FY" and convert to numeric
+  mutate(year = str_remove(year, "FY") %>% as.numeric()) %>%
+  filter(d2 == "Producer: Smallholder Farmer") %>%
+  mutate(group = if_else(ou %in% plot_group, "Key OUs*" #paste(plot_group, collapse="\n")
+                         , if_else(ou == "Nigeria", "Nigeria", "Other OUs"))) %>%
+  # Create a ggplot visualization:
+  ggplot(aes(year, Hybrid_OULevel, fill = group, group = group)) +  # Set x and y variables, and color by 'name'
+  geom_bar(stat = "summary", fun = sum_, na.rm = TRUE) +  # Add a line plot with sum summary statistic
+  #facet_grid(. ~ d2) +  # Create a faceted plot based on 'd2'
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  scale_y_continuous(labels = scales::comma, limits = c(0,8e6)) +
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+       guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+
+  ggtitle(paste("Hybrid count")) + # Set plot title
+  theme(legend.position = "bottom")
+
+p2 <- headcount_im %>% set_disaggs() %>%
+  # Modify the 'year' column: Remove "FY" and convert to numeric
+  mutate(year = str_remove(year, "FY") %>% as.numeric()) %>%
+  filter(d2 == "Producer: Smallholder Farmer" & ou %in% plot_group) %>%
+  mutate(ou = if_else(ou =="Bureau for Resilience and Food Security (RFS)", "RFS", ou)) %>%
+  # mutate(group = if_else(ou %in% plot_group, paste(plot_group, collapse="\n"),
+  #                        if_else(ou == "Nigeria", "Nigeria", "Other OUs"))) %>%
+  # Create a ggplot visualization:
+  ggplot(aes(year, IM_Level_Sum, fill = ou)) +  # Set x and y variables, and color by 'name'
+  geom_bar(stat = "summary", fun = sum_, na.rm = TRUE) +  # Add a line plot with sum summary statistic
+  #facet_grid(. ~ ou) +  # Create a faceted plot based on 'd2'
+ 
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  scale_y_continuous(labels = scales::comma, limits = c(0,8e6)) +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(4, "Set1")) +
+  
+  xlab("Fiscal Year") + 
+  ylab("Number of Smallholders") + 
+  guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  ggtitle("Sum of IM count in key OUs") + # Set plot title
+
+  theme(legend.position = "bottom")
+
+gridExtra::grid.arrange(p1, p2, nrow = 1)  # Label x and y axes
+
+
+```
+
+The changes in smallholder participation are not evenly spread throughout the initiative, but are concentrated in a few operating units and activities. The next section discusses the activities that have contributed most to the changes in smallholder participation.
+
+## Activity/IM level Differences between FY2021 and FY2022
+
+```{r include = F}
+big_diff <- headcount_im %>% set_disaggs() %>%
+  # Modify the 'year' column: Remove "FY" and convert to numeric
+  mutate(year = str_remove(year, "FY") %>% as.numeric()) %>%
+  filter(d2 == "Producer: Smallholder Farmer") %>%
+  pivot_wider(id_cols = c(ro, ou, a_code, a_name, d2)
+              , names_from = year, values_from = IM_Level_Sum) %>%
+  mutate(difference = replace_na(`2022`, 0) - replace_na(`2021`, 0) ) %>%
+  filter(abs(difference) > 50000) %>%
+  arrange(difference)
+abs(sum(big_diff$difference[1:4]))
+```
+
+The Activity/IM level reporting provides additional detail on the extent to which ending activities contribute to the drop in participation levels. Twenty-four activities had an absolute value change of 50,000 smallholder participants between FY2021 and FY2022 (shown in Figure \@ref(fig:big-diff)). The four largest losses, shown at the top of the figure, account for a loss of `r round(abs(sum(big_diff$difference[1:4 ]))/1e6, 1)` million, while those with losses above 50,000 account for `r round(abs(sum(big_diff$difference[big_diff$difference < -5e5 ]))/1e6, 1)` million. These losses are counteracted by nine activities that gained more than 50,000 smallholder farmer participants, for a total of `r round(abs(sum(big_diff$difference[big_diff$difference > 5e4 ]))/1e6, 1)` million.
+
+```{r big-diff, echo = F, warning = F, fig.width = 7, fig.height = 10, fig.cap="Changes in smallholder participation can be explained in part by activities ending."}
+big_diff_codes <- headcount_im %>% set_disaggs() %>%
+  # Modify the 'year' column: Remove "FY" and convert to numeric
+  mutate(year = str_remove(year, "FY") %>% as.numeric()) %>%
+  filter(d2 == "Producer: Smallholder Farmer") %>%
+  pivot_wider(id_cols = c(ro, ou, a_code, a_name, d2)
+              , names_from = year, values_from = IM_Level_Sum) %>%
+  mutate(difference = replace_na(`2022`, 0) - replace_na(`2021`, 0) ) %>%
+  filter(abs(difference) > 50000) %>% distinct(a_code, a_name)
+
+# TODO: figure out dimensions
+headcount_im %>% set_disaggs() %>%
+  # Modify the 'year' column: Remove "FY" and convert to numeric
+  mutate(year = str_remove(year, "FY") %>% as.numeric()) %>%
+  filter(d2 == "Producer: Smallholder Farmer") %>%
+  pivot_wider(id_cols = c(ro, ou, a_code, a_name, d2)
+              , names_from = year, values_from = IM_Level_Sum) %>%
+  mutate(difference = replace_na(`2022`, 0) - replace_na(`2021`, 0) ) %>%
+  filter(abs(difference) > 50000) %>%
+  arrange(difference) %>% 
+  select(ro, ou, a_name, a_code,  `2021`, `2022` ,difference) %>%
+  
+  ggplot(aes(difference, forcats::fct_reorder(paste0(ro, "/", ou, ": ", a_name)
+                                              , difference, .desc = T))) +
+  geom_bar(stat="identity") +
+  scale_y_discrete(labels = scales::label_wrap(50)) +
+  usaid_plot() +
+  xlab("Difference in Smallholder Farmer Participation") +
+  ylab("Activities with >50,000 Difference (Operating Unit: Activity)") +
+  scale_x_continuous(labels = scales::comma, limits = c(-1e6, 1e6)) +
+
+  ggtitle("Large swings in Smallholder Farmer Participation between FY21 and FY22")
+```
+
+```{r echo = F, warning = F , fig.width = 7.5, include=F}
+headcount_im  %>% set_disaggs() %>%
+  # Modify the 'year' column: Remove "FY" and convert to numeric
+  mutate(year = str_remove(year, "FY") %>% as.numeric()) %>%
+  filter(ou %in% plot_group) %>%
+  mutate(ou = if_else(ou == "Bureau for Resilience and Food Security (RFS)", "RFS", ou)) %>%
+  ggplot(aes(year, IM_Level_Sum, color = ou)) +  # Set x and y variables, and color by 'name'
+  geom_line(stat = "summary", fun = sum_, na.rm = TRUE, linewidth = 1) +  # Add a line plot with sum summary statistic
+  facet_grid(.~d2) +  # Create a faceted plot based on 'd2'
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Participants") +  # Label x and y axes
+  ggtitle(paste("Hybrid count of participants")) +
+  scale_y_continuous(labels = scales::comma) +
+
+  theme(legend.position = "bottom")
+```
+
+```{r include = F}
+dat <- headcount_im %>% set_disaggs() %>%
+  select(ro, ou, a_code, a_name, d2, year, IM_Level_Sum) %>%
+    arrange(year) %>%
+
+  pivot_wider(names_from = c(year), values_from = IM_Level_Sum
+              , values_fn = sum_) %>%
+  arrange(ro, ou, a_code, a_name, d2) 
+  
+dat[sapply(dat, is.infinite)] <- NA
+# sheet_write(dat , 
+#             ss = '1RLq9K-ktwULWavjEv5XIgs4pJXQJ3wPoFJOr8l3LqcY'
+#             , sheet = "Percent Change")
+```
+
+```{r include = F}
+
+load("../../data/extract.Rdata")
+
+activities %>%
+  filter(a_name %in% big_diff_codes$a_name) %>%
+  arrange(as.Date(a_end, "mm/dd/yyyy")) %>%
+  filter(ou == "Uganda (UGANDA)")
+
+```
+
+Several of these activities ended recently:
+
+-   The Tanzania activity, "Mboga na Matunda", ended 6/30/2022.
+
+-   The Bangladesh activity, "FTF Bangladesh Rice and Diversified Crops" ended 12/12/2021.
+
+-   The Rwanda activity "Tera Imuto Nziza" ended 10/1/2022; the "Hinga Weze" activity ended 6/22/2022.
+
+-   The Senegal activity, "FTF Senegal Dundël Suuf Fertilizer Project", ended 2/19/2023.
+
+-   The Malawi activity"AG Diversity Activity" ended 9/28/2023.
+
+-   The Mozambique activity "SEMEAR" ended 9/30/202; the Mozambique Value Chain activity ended 6/30/2022.
+
+-   The Ethiopia "Value Chain activity" ended 6/30/2022. The Uganda activity "Agribusiness initiative" ended 11/1/2021.
+
+Others would require additional research to explain why they lost participation from so many smallholders:
+
+-   The Ghana activity, "AGRA-Partnership..." is ongoing and we do not have an explanation for why it lost so many smallholders year over year.
+
+-   The RFS activity "CR: African Risk Capacity Pool (Replica+)" ends in October 2025, so we do not have an explanation for why it lost so many smallholder participants year over year. The "PIATA" activity ends in September 2027.
+
+-   The Ethiopia activity, "DFSA-PSNP World Vision" does not have an end date, but it is labeled "closed"; it started 9/28/2016, so may have closed after the 5th year in 2021. Same for the "DFSA-PSNP CRS" activity in Ethiopia.
+
+
+```{r include=F, fig.width=7.5}
+annual_comparison <- headcount_ou %>% set_disaggs() %>%
+  #filter(!(ro == "USAID" & ou %in% c("Bangladesh", "Rwanda", "Ethiopia"))) %>%
+  #pivot_longer(-c(ro, ou, d1, d2, year)) %>%
+  #unite(name, d2, col = "indicator") %>% 
+  filter(ro == "USAID") %>%
+  group_by(d2, year) %>%
+  summarize(across(c(IM_Level_Sum, OU_Level, Hybrid_OULevel)
+                   , ~ sum_(.))) %>%
+  arrange(year) %>%
+  pivot_longer(cols = c(IM_Level_Sum, OU_Level, Hybrid_OULevel)) %>%
+  pivot_wider(id_cols = c(d2, name), names_from = year) %>%
+  rename(Disaggregate = d2, Indicator = name)
+
+# sheet_write(annual_comparison, ss = '1RLq9K-ktwULWavjEv5XIgs4pJXQJ3wPoFJOr8l3LqcY'
+#             , sheet = "Comparison of method by year")
+```
+
+Where is the greatest level of over- and under-counting, measured by the absolute difference between the OU-Level indicator and the IM-level sum?
+
+```{r include=F, echo = F , warning=F, fig.width=7.5}
+data <- headcount_ou %>% set_disaggs() %>%
+  filter(!is.na(OU_Level)) %>%
+  mutate(overcount =  (OU_Level - IM_Level_Sum)/1000) 
+
+data %>%
+
+  # ggplot(aes(forcats::fct_rev(ou), overcount, fill = if_else(ou == "Nigeria", "Nigeria", "All other OUS"))) +
+  # geom_bar(stat="summary", fun= ~ abs(sum_(.)), na.rm = T) +
+  ggplot(aes(overcount)) +
+  
+  geom_histogram(binwidth = 50) +
+  facet_grid(d2~year) +
+  # coord_flip() +
+  ggtitle("Absolute difference of IM-level and OU-level participants (000s) \n (OU_Level - IM_Level_Sum)/1000)") +
+  xlab("Difference between reported values") +
+  ylab("Count of OUs") +
+  # scale_fill_continuous(labels = c("All Other OUs", "Nigeria"))  +
+  # geom_text(aes(label=paste(label)), na.rm=TRUE, hjust=-.5)
+  scale_x_continuous(labels = scales::comma) +
+  # TODO: change text size to smaller y axis
+  
+  usaid_plot()
+
+```
+
+```{r echo=F, include=F, fig.width=7.5, warning=F}
+# headcount_ou %>% set_disaggs() %>% #distinct(year)
+#   filter(!is.na(OU_Level)) %>%
+#   mutate(overcount =  (OU_Level - IM_Level_Sum)/1000) %>%
+#   filter(abs(overcount) > .5) %>%
+#   left_join(regions, join_by(ou == OU)) %>%
+# 
+# 
+#   ggplot(aes(forcats::fct_rev(ou), overcount, fill = Region)) +
+#   geom_bar(stat="summary", fun= sum_, na.rm = T) +
+#   facet_wrap(.~d2, scales = "free_x") +
+#   coord_flip() +
+#   ylab("Estimated Overcount of IM-level participants (000s)") +
+#   xlab("Operating Unit") +
+#   #scale_fill_continuous(labels = c("All Other OUs", "Nigeria")) +
+#   scale_x_discrete(labels = scales::label_wrap(5)) +
+#   ggtitle("OUs with >500 Overcounting from IM-level") + 
+#   theme(legend.text=element_text(size=12)) +
+#   theme(legend.text=element_text(size=10)) +
+#   usaid_plot()
+
+```
+
+```{r echo = F, include=F, warning=F, fig.width=7.5}
+headcount_ou %>% set_disaggs() %>%
+  #mutate(year = str_remove(year, "FY") %>% as.numeric())  %>%
+  filter(ro == "USAID" & ou == "Nigeria") %>%
+  pivot_longer(cols = c(Hybrid_OULevel)) %>%
+  ggplot(aes(year, value, fill = interaction(d2, name))) +
+  geom_bar(stat="summary", fun=sum, na.rm = T, position = "dodge2") +
+  
+  coord_flip() +
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Smallholder Participants") +  # Label x and y axes
+
+  theme(legend.position = "bottom") +
+  theme(legend.text=element_text(size=10)) +
+
+  ggtitle("Smallholder participants in Nigeria")  # Set plot title
+```
+
+```{r echo = F, include=F, warning=F, fig.width=7.5}
+headcount_im %>% set_disaggs() %>%
+  #mutate(year = str_remove(year, "FY") %>% as.numeric())  %>%
+  filter(ro == "USAID" & ou == "Nigeria") %>%
+  ggplot(aes(year, IM_Level_Sum, fill = d2)) +
+  geom_bar(stat="summary", fun=sum_, na.rm = T, position = "dodge") +
+  coord_flip() +
+  usaid_plot() +  # Customize the plot using a custom 'usaid_plot' function
+  xlab("Fiscal Year") + ylab("Number of Smallholder Participants") +  # Label x and y axes
+  scale_y_continuous(labels = scales::comma) +
+  ggtitle("Smallholder participants in Nigeria")  # Set plot title
+```
+
+
+```{r include = F, warning=F, fig.width=7.5}
+greater_oulevel <- headcount_ou %>%
+  #filter(ro == "USAID" & ou == "Afghanistan") #%>% #distinct(year)
+  mutate(Difference = IM_Level_Sum - OU_Level) %>%
+  filter(Difference < 0)
+# 
+# sheet_write(greater_oulevel, ss = '1RLq9K-ktwULWavjEv5XIgs4pJXQJ3wPoFJOr8l3LqcY'
+#             , sheet = "Anomalous OUs with OU-level > IM sum") 
+
+```
+
+
+## Analysis of reporting on different indicators
+```{r}
+
+```
+
+- Next, look at the count of participants being reported in other indicators (EG.3.2-24 sum of sex, EG.3.2-26 highest 'number of participant producers' or 'number of participant firms' from a single commodity or 'Type of Product' or 'Type of Service', and EG.3.2-27 'number of recipients').
+- Look at the Activity/IM-level (USAID only; FY18-22) and see if any IM has reported a higher participant count in these other indicators than in EG.3-2.  
+- Flag these instances in a table.  Alert me if the counts seems way higher than our overall EG.3-2 headcount in any year FY18-22.
+

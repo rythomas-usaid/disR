@@ -1,0 +1,102 @@
+---
+title: "PPP Analysis"
+author: "Ryan Thomas"
+date: "2023-09-08"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+Here is the Progress Snapshot view of Sales without accounting for PPP. These values are based on the reported dollars at the time of sale.
+```{r echo=F, warning=F}
+library(disR)
+library(tidyverse)
+load("../../downloads/extract.Rdata")
+```
+
+```{r}
+ind_key <- "Sex of recipient(s)"
+ind_code = "EG.3.2-27"
+```
+
+
+```{r}
+print_udns("EG.3.2-27")
+```
+
+
+```{r}
+# filter_udns <- function(ind_code, dn) {
+#   filtered <- udns %>%
+#     filter(ic %in% ind_code & Disaggregate.Name == dn) %>%
+#     ungroup() %>%
+#     filter(nchar(udn) == max(nchar(udn))) %>%
+#     select(udn_formulas) %>%
+#     unlist()
+# 
+#   names(filtered) <- NULL
+# 
+#   return(filtered)
+# }
+
+filter_udns("EG.3.2-27", "Sex of recipient(s)")
+```
+
+
+```{r}
+filter_indicators("EG.3.2-27", "Sex of recipient(s)")
+```
+
+```{r}
+ppp_sales <- filter_indicators("EG.3.2-27", "Sex of recipient(s)") %>% 
+
+  join_tables() %>%
+  
+  left_join(ppp_countries) %>% relocate(Country.Code, .after=Disaggregate.Country) %>% 
+  
+  left_join(prvt_pp, suffix = c("",".prvt_pp"), join_by(Country.Code, closest(year >= year))) %>% 
+  
+  left_join(exch_rate, suffix = c("",".exch_rate"), join_by(Country.Code, closest(year >= year))) %>% 
+  
+  filter(year %in% 2020:2022) %>%
+  
+  mutate(Disaggregate.Name = case_when(
+    ic == "EG.3.2-27" & substr(udn, 5, 5) == "2" ~ paste(Disaggregate.Name, "Number")
+    , ic == "EG.3.2-27" & substr(udn, 5, 5) == "1" ~ paste(Disaggregate.Name, "Value"))
+    , actual_prvt = case_when(str_detect(Disaggregate.Name, "Value") ~ actual * (exch_rate / prvt_pp))) %>%
+  
+  select(a_code, ro, ou, Disaggregate.Name, Disaggregate.Country
+         , Country.Code, year, nom=actual, actual_prvt) %>%
+
+    pivot_longer(c(nom, actual_prvt), names_to = "type", values_to = "value") %>%
+  
+  arrange(year, Disaggregate.Name, type) %>% 
+  filter(!is.na(value)) 
+
+ppp_sales
+```
+
+
+```{r}
+write.csv(ppp_sales %>%
+  
+  # pivot_wider(id_cols = c(ro, ou, year)
+  #             , names_from = c(Disaggregate.Name, type)
+  #             , values_from = value
+  #             , values_fn = ~if(all(is.na(.))) NA_real_ else sum(., na.rm=T)) %>%
+  # 
+  # mutate(year = as.character(year)) %>%
+
+  group_by(ro, ou, year, Disaggregate.Country, type) %>%
+  summarize(value = sum_(value), .groups="drop") %>%
+  arrange(year) %>%
+  pivot_wider(id_cols = c(ro, ou, Disaggregate.Country)
+              , names_from = c(year, type)
+              , values_from = value)
+  , file = "../output/prvt_pp_sales_by_ou-country.csv", na = "")
+
+
+```
+
+

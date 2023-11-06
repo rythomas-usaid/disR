@@ -1,0 +1,100 @@
+---
+title: "Total People in Private Sector Firms"
+author: "Ryan Thomas"
+date: "2023-09-18"
+output: html_document
+---
+
+
+```{r warning=F, message=F}
+options(scipen=999)
+library(disR) # load data and custom functions
+library(tidyverse)
+```
+
+
+# EG.3.2-2
+```{r echo=F}
+inds <- indicators %>%  #Select all the indicators you want
+  filter(str_detect(ic, "EG.3-2") & 
+               d1 == "Type of Individuals Participating" &
+               d2 == "People in USG-Assisted Private Sector Firms")
+
+ou_total_imsum <- inds %>% filter(ic == "EG.3-2") %>%
+  left_join(x = ., y = filter(values, type=="Actual")
+                , by = join_by(id == id_ind)
+                , suffix = c("_ind", "_val") # label variables 
+                , keep = FALSE)  %>% #distinct(year)
+  left_join(x = ., y = ims
+                , join_by(id_im == id)) %>%
+  
+  group_by(ic, ro, ou, d2, year) %>%
+  
+  summarise(value = sum(value, na.rm=T))
+```
+
+
+```{r echo=F}
+ou_total_hli <- inds %>% filter(ic != "EG.3-2") %>%
+  left_join(x = ., y = filter(values, type=="Actual")
+                , by = join_by(id == id_ind)
+                , suffix = c("_ind", "_val") # label variables 
+                , keep = FALSE)  %>% #distinct(year)
+  
+  left_join(x = ., y = ims
+                , join_by(id_im == id)) %>%
+  
+  group_by(ic, ro, ou, d2, year) %>%
+  
+  summarise(value = sum(value, na.rm=T))
+```
+
+
+```{r echo=F}
+hli_NOTna_ous <-   indicators %>%  #Select all the indicators you want
+  filter(str_detect(ic, "EG.3-2") & 
+               (d1 == "Sex of Individuals Participating" |
+           d2 == "People in USG-Assisted Private Sector Firms")) %>%
+  left_join(x = ., y = filter(values, type=="Actual")
+                , by = join_by(id == id_ind)
+                , suffix = c("_ind", "_val") # label variables 
+                , keep = FALSE)  %>% #distinct(year)
+  
+  left_join(x = ., y = ims
+                , join_by(id_im == id)) %>%
+  
+  mutate(d1 = case_when(d1 == "Sex of Individuals Participating" ~ "Total"
+                        , d1 == "Type of Individuals Participating" ~ "in USG-Assisted Firms")) %>%
+  group_by(ic, ro, ou, d1, year) %>%
+  
+  summarise(value = sum(value, na.rm=T)) %>% 
+  #filter(year == "FY2022") %>%
+  
+    pivot_wider(id_cols = c(ro, ou, year)
+                  , names_from = c(ic, d1)
+                  , values_from = value
+                  , values_fn = ~ if(all(is.na(.))) NA_real_ else sum(., na.rm=T)) %>%
+  
+  # Various checks
+  #filter(`EG.3-2_OULevel_Total` > `EG.3-2_Total` ) %>% 
+  #write.csv("../output/2023-09-18_EG3-2_People in USG-Assisted Private Sector Firms_hli_errors.csv")
+
+  # filter(is.na(`EG.3-2_in USG-Assisted Firms`) & !is.na(`EG.3-2_OULevel_in USG-Assisted Firms`))
+  mutate(`# in firms corrected for OU total missing` = case_when(
+    is.na(`EG.3-2_OULevel_Total`) ~  `EG.3-2_in USG-Assisted Firms`
+    , !is.na(`EG.3-2_OULevel_Total`) ~ `EG.3-2_OULevel_in USG-Assisted Firms`)
+    
+    , `# in firms corrected for OU # in firms missing` = case_when(
+      is.na(`EG.3-2_OULevel_in USG-Assisted Firms`) ~ `EG.3-2_in USG-Assisted Firms`
+      , !is.na(`EG.3-2_OULevel_in USG-Assisted Firms`) ~ `EG.3-2_OULevel_in USG-Assisted Firms`)) %>%
+  arrange(desc(year), desc(ro), ou)
+  
+write.csv(hli_NOTna_ous, "../output/2023-09-18_EG3-2_People in USG-Assisted Private Sector Firms_hli and corrected_by_ou.csv")
+  
+hli_NOTna_initiative <- hli_NOTna_ous  %>%
+  group_by(year) %>%
+  summarise(across(where(is.numeric), ~ if(all(is.na(.))) NA_real_ else sum(., na.rm=T)))
+
+write.csv(hli_NOTna_initiative
+          , "../output/2023-09-18_EG3-2_People in USG-Assisted Private Sector Firms_hli and corrected_by_initiative.csv")
+```

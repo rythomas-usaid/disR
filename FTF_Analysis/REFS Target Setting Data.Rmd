@@ -1,0 +1,207 @@
+---
+title: "REFS Target Setting Data"
+author: "Ryan Thomas"
+date: "2023-10-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("../../data/basic.Rdata")
+library(disR)
+library(tidyverse)
+library(googlesheets4)
+
+join_tables <- function(x) {
+  x %>% #distinct(udn)
+
+    # join values
+    left_join(x = ., y = values
+            , by = join_by(id == id_ind)
+            , suffix = c("_ind", "_val") # label variables
+            , keep = FALSE)  %>%
+    
+    # join activities details
+    left_join(activities
+              , by = join_by(id_ac == id)
+              , suffix = c("_ind", "_val") # label variables
+              , keep = FALSE)
+}
+
+sheet <- "1Lsdg-TT5YdATg4q5o8A9o_RcwsEGIARdC46_uWVoDAk"
+```
+
+## Sales
+
+```{r }
+sales <- indicators %>%  
+  #Select all the indicators you want
+  filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19") &
+           if_any(everything(), ~str_detect(., "Sex")) &
+           if_any(d4, ~str_detect(., "Value of Sales"))) %>% 
+  
+  
+  left_join(x = ., y = filter(values)
+                , by = join_by(id == id_ind)
+                , suffix = c("_ind", "_val") # label variables 
+                , keep = FALSE) %>% #distinct(year)
+  left_join(ims, join_by(id_im==id)) %>% #filter(ou == "Bureau for Resilience and Food Security (RFS)") %>%
+  
+  arrange(year, desc(type)) %>%
+    
+  filter(as.numeric(str_remove(year, "FY")) >= 2020 & 
+           ou == "Bureau for Resilience and Food Security (RFS)") %>%
+  pivot_wider(id_cols = c(ro, ou, ic_1819, a_code, a_name)
+              , names_from =  c(year, type)
+              , values_from = value
+              , values_fn = sum_) %>%
+  filter(if_any(starts_with("FY2021|FY2022"), ~ !is.na(.))) %>%
+  rename(`Activity Code` = a_code, `Activity Name` = a_name) %>% 
+  select(-c(ou, ro, ic_1819))
+
+
+```
+
+## Climate Hectares
+
+You can also embed plots, for example:
+
+```{r echo=FALSE}
+ ca_hectares <- indicators %>%
+  filter((d1 == "Crop Land" | d1 == "Cultivated Pasture") &  
+           d3 == "Climate Adaptation/Climate Risk Management") %>% 
+  
+  
+  left_join(x = ., y = filter(values)
+                , by = join_by(id == id_ind)
+                , suffix = c("_ind", "_val") # label variables 
+                , keep = FALSE) %>% #distinct(year)
+  left_join(ims, join_by(id_im==id)) %>%
+  
+  arrange(year, desc(type)) %>%
+  filter(as.numeric(str_remove(year, "FY")) >= 2020 & 
+           ou == "Bureau for Resilience and Food Security (RFS)") %>%
+  pivot_wider(id_cols = c(ro, ou, ic_1819, a_code, a_name)
+              , names_from =  c(year, type)
+              , values_from = value
+              , values_fn = sum_) %>%
+  filter(if_any(starts_with("FY2021|FY2022"), ~ !is.na(.))) %>%
+  rename(`Activity Code` = a_code, `Activity Name` = a_name) %>% 
+  select(-c(ou, ro, ic_1819))
+
+
+```
+
+## Total Hectares
+
+You can also embed plots, for example:
+
+```{r echo=FALSE}
+ tot_hectares <- indicators %>%
+  filter((d1 == "Crop Land" | d1 == "Cultivated Pasture") &
+          d2 == "Sex" ) %>% 
+  
+  
+  left_join(x = ., y = filter(values)
+                , by = join_by(id == id_ind)
+                , suffix = c("_ind", "_val") # label variables 
+                , keep = FALSE) %>% #distinct(year)
+  left_join(ims, join_by(id_im==id)) %>%
+  
+  arrange(year, desc(type)) %>%
+  filter(as.numeric(str_remove(year, "FY")) >= 2020 & 
+           ou == "Bureau for Resilience and Food Security (RFS)") %>%
+  pivot_wider(id_cols = c(ro, ou, ic_1819, a_code, a_name)
+              , names_from =  c(year, type)
+              , values_from = value
+              , values_fn = sum_) %>%
+  filter(if_any(starts_with("FY2021|FY2022"), ~ !is.na(.))) %>%
+  rename(`Activity Code` = a_code, `Activity Name` = a_name) %>% 
+  select(-c(ou, ro, ic_1819))
+
+# tot_hectares %>% arrange(desc(FY2022_Actual))
+
+```
+
+
+## Gender finance gap
+```{r}
+#rm(list=ls())
+load("../../data/extract.Rdata")
+sheet <- "1Lsdg-TT5YdATg4q5o8A9o_RcwsEGIARdC46_uWVoDAk"
+
+
+gender_finance <- filter_indicators(ind_code = "EG.3.2-27", dn = "Sex") %>% 
+   
+  join_tables()  %>% 
+
+ mutate(unit = if_else(substr(udn, 5, 5) == "2", "Number"
+                , if_else(substr(udn, 5, 5) == "1", "Value","PROCESS"))) %>%
+  
+  select(ic, ro, ou, a_code, a_name, unit, Disaggregate.Name, Disaggregate.Country, 
+         year, actual, target) %>%
+  
+ 
+  pivot_wider(names_from = "unit", values_from = c("actual", "target")
+              , values_fn = ~if(all(is.na(.))) NA_real_ else sum(., na.rm=T)) %>%
+  filter(if_all(ends_with("Value|Number"), ~ . > 0)) %>%
+  mutate(per_person_actual = actual_Value / actual_Number
+         , per_person_target = target_Value, target_Number) %>%
+  pivot_wider(id_cols = c(ic, ro, ou, a_code, a_name, year)
+              , names_from = Disaggregate.Name
+              , values_from = c(per_person_actual, per_person_target)
+              , values_fn = ~ sum_(.)) %>%
+  filter(ro == "USAID" & ou=="Bureau for Resilience and Food Security (RFS)"  
+                           & between(year, left = 2020, right = 2025)) %>% 
+  arrange(ou, a_code, year) %>%
+  
+  mutate(`Actual_Financing Ratio (Female/Male)` = per_person_actual_Female/per_person_actual_Male
+         , `Target_Financing Ratio (Female/Male)` = per_person_target_Female/per_person_target_Male
+         , year = paste0("FY", year)) %>%
+  pivot_longer(cols = c(`Actual_Financing Ratio (Female/Male)`, `Target_Financing Ratio (Female/Male)`)
+               , names_to = "disaggregate"
+               , values_to = "value") %>% 
+  select(ic, ro, ou, a_code, a_name, disaggregate, year, value) %>%
+  separate(disaggregate, into = c("type", "disaggregate"), sep = "_") %>%
+  
+  arrange(year, desc(type)) %>%
+  pivot_wider(id_cols = c(ic, ro, ou, a_code, a_name, disaggregate) 
+              , names_from = c(year, type), values_from = value, names_sep = " ") %>%
+  filter(if_any(starts_with("FY"), ~ !is.na(.))) %>%
+  rename(`Activity Code` = a_code, `Activity Name` = a_name) %>% 
+  select(-c(ou, ro, ic, disaggregate))
+```
+
+
+```{r}
+id_ac <- activities %>% 
+  filter(a_code %in% str_pad( sales$`Activity Code`, width = 8, side = "left", pad = "0")) %>%
+  distinct(id) %>% c()
+
+oids <-unique(values$id_off[values$id_ac %in% id_ac$id])
+offices[offices$id %in% oids,]
+
+values %>% 
+  filter(id_ac %in% ) %>%
+  distinct(id_off)
+
+left_join(sales, offices)
+```
+
+
+```{r}
+
+sheet_write(tot_hectares %>% arrange(desc(FY2022_Actual))
+            , sheet = "Total Hectares", ss = sheet)
+
+sheet_write(sales, sheet = "Sales", ss = sheet)
+
+sheet_write(ca_hectares, sheet = "Climate Hectares", ss = sheet)
+
+sheet_write(gender_finance, sheet = "Gender Finance Ratio (Female/Male", ss = sheet)
+
+#gender_finance
+```
+
+
+

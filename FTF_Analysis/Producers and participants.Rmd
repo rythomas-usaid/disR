@@ -1,0 +1,56 @@
+---
+title: "Progress Snapshot"
+author: "Ryan Thomas"
+date: "2023-10-11"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r warning=F, message=F}
+options(scipen=999)
+library(tidyverse)
+### CHANGE PATH TO LOCAL DIRECTORY
+load("../../data/basic.Rdata")
+sum_ <- function(x) if(all(is.na(x))) NA_real_ else sum(x, na.rm=T)
+```
+
+
+
+# EG.3.2-26 Number of Producers by IM by Year
+```{r echo=F}
+producers <- indicators %>%  
+  #Select all the indicators you want
+  filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19") &
+           if_any(everything(), ~str_detect(., "Sex")) &
+           if_any(d4, ~str_detect(., "Number"))) %>% 
+  # sum_indicators(ind_code = ind_code, total = T, 
+  #                disaggregate = c("Crop Land|Cultivated Pasture|Aquaculture"))
+  left_join(x = ., y = filter(values, type=="Actual")
+            , by = join_by(id == id_ind)
+            , suffix = c("_ind", "_val") # label variables 
+            , keep = FALSE)  %>%
+   left_join(x = ., y = ims, join_by(id_im == id)) %>%
+   
+   group_by(ic_1819, ro, ou, a_code, a_name, year) %>%
+   summarise(eg3_2_26_producers = sum_(value), .groups="drop")
+write.csv(producers, "../../../output/producers_by_year_by_im.csv")
+```
+
+
+# EG.3-2 Number of Participants
+```{r echo=F}
+participants <- indicators %>%
+  filter(ic_1819 == "EG.3-2" & d1 == "Sex of Individuals Participating")  %>%
+  left_join(x = ., y = filter(values, type=="Actual")
+            , by = join_by(id == id_ind)
+            , suffix = c("_ind", "_val") # label variables 
+            , keep = FALSE)  %>%
+   left_join(x = ., y = ims, join_by(id_im == id)) %>%
+   
+   group_by(ic_1819, ro, ou, a_code, a_name, year) %>%
+   summarise(eg3_2_participants = sum_(value), .groups="drop") 
+write.csv(participants, "../../../output/participants_by_year_by_im.csv")
+```
