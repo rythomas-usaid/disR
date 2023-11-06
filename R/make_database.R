@@ -1,31 +1,43 @@
 #' Make FtF indicator database
 #'
 #' Create a single database from all the final indicator spreadsheets.
-#' @param path_to_input The directory with all of the indicator files in the same format (xlsx by default).
-#' @param path_to_output The directory where you want to store the output files.
+#' @param input_dir The directory with all of the indicator files in the same format (xlsx by default).
+#' @param output_dir The directory where you want to store the output files.
 #' @param db The database format ("magnus" by default, or "extract")
 #' @param input_pattern The file format for all input files.
 #' @return Saves database in .Rdata format in the specified directory.
 #' @examples
-#' make_database(path_to_input = "../../indicators/", path_to_output = "../downloads/")
-#' make_database(path_to_input = "../../indicators/", path_to_output = "../downloads/", db = "extract")
+#' make_database(input_dir = "../../indicators/basic/"
+#'               , output_dir = "../data/"
+#'               , db = "basic")
+#' make_database(input_dir = "../../indicators/"
+#'               , output_dir = "../downloads/"
+#'               , db = "extract")
 #'
 #' @import googlesheets4
 #'
 #' @export
-make_database <- function(path_to_input, path_to_output, db = "magnus", input_pattern = "xlsx") {
+make_database <- function(input_dir, output_dir, db = "basic") {
 
     return_id <- function(row) {
     l <- round(log10(nrow(row))+1,0)
     id <- str_pad(rownames(row), width = l, pad = "0", side = "left")
     return(id)
-  }
+    }
 
-  if(db == "magnus") {
-    indicator_files <- list.files(path_to_input, pattern = input_pattern)
+    ## Join udn formulas #################
+    list_udns <- function(x) {
+      stringr::str_replace_all(x, "[()/+*]|100|Manual|NA", " ") %>%
+        stringr::str_extract_all(stringr::boundary("word"))
+    }
+
+########## basic db ################
+
+  if(db == "basic") {
+    indicator_files <- list.files(input_dir, pattern = "xlsx")
 
   indicators_df <- purrr::map(
-    stringr::str_c(path_to_input, indicator_files), ~ disR::read_indicator(.x)) %>%
+    stringr::str_c(input_dir, indicator_files), ~ disR::read_indicator(.x)) %>%
     purrr::list_rbind() %>%
     #relocate(c(d3, d4), .after=d2) %>%
     dplyr::filter(!is.na(value)) %>%
@@ -73,10 +85,82 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
             d2 =="Sex" ~ "Extensively managed"
       , .default = NA))
 
+  # resequence the “order” of disaggregates
+  hectares_indicators <- indicators %>%
+    dplyr::filter(ic_1819 == "EG.3.2-25/EG.3.2-x18" ) %>%
+    dplyr::mutate(disag1 = d2
+                  , disag2 = d3
+                  , disag3 = d1) %>%
+    dplyr::select(-c(d1, d2, d3, d4))
+
+  sales_indicators <- indicators %>%
+    dplyr::filter(ic_1819 == "EG.3.2-26/EG.3.2-x19" ) %>%
+    dplyr::mutate(ic_1819 = case_when(
+      stringr::str_detect(d4, "Value") ~ paste0(ic_1819, "_value")
+      , stringr::str_detect(d4, "Number") ~ paste0(ic_1819, "_number")
+      , stringr::str_detect(d4, "Volume") ~ paste0(ic_1819, "_volume"))
+      , .after = ic_1819) %>%
+
+    # encode combination categories
+    # https://docs.google.com/document/d/1qwfBlce3UUmMzKY7ABCMcb_Tx_Mb7d7IeKHUn-5zhlU/edit
+    dplyr::mutate(disag1 = d3
+                  , disag2 = sub(" -.*", "", d4)
+                  , disag3 = d2
+                  , disag4 = d1) %>%
+    dplyr::select(-c(d1, d2, d3, d4))
+
+  producers_indicators <- indicators %>%
+    dplyr::filter(ic_1819 == "EG.3.2-24/EG.3.2-x17" ) %>%
+    dplyr::mutate(disag1 = d2
+                  , disag2 = d3
+                  , disag3 = d1) %>%
+    dplyr::select(-c(d1, d2, d3, d4))
+
+  financing_indicators <- indicators %>%
+    dplyr::filter(ic_1819 == "EG.3.2-27/EG.3.2-x6") %>%
+    dplyr::mutate(ic_1819 = case_when(
+      stringr::str_detect(d2, "Value") ~ paste0(ic_1819, "_value")
+      , stringr::str_detect(d2, "Number") ~ paste0(ic_1819, "_number")
+      , stringr::str_detect(d2, "Volume") ~ paste0(ic_1819, "_volume"))
+      , .after = ic_1819) %>%
+    dplyr::mutate(d3 = case_when(
+      stringr::str_detect(d3, "Sex") ~ "Sex"
+      , stringr::str_detect(d3, "Age") ~ "Age"
+      , stringr::str_detect(d3, "Size") ~ "Size")
+      , .after = d2) %>%
+    # distinct(d1, d2)
+    dplyr::filter(d1 %in% c("Type of Financing Accessed: Cash Debt"
+                            ,"Type of Financing Accessed: In-Kind Debt"
+                            , "Type of Financing Accessed: Non-Debt" )) %>%
+    dplyr::mutate(d1 = sub(".*: ", "", d1)) %>%
+    dplyr::mutate(disag1 = d3
+                  , disag2 = d4
+                  , disag3 = d1) %>%
+    dplyr::select(-c(d1, d2, d3, d4))
+
+  # Filter unique on the reorganized indicators
+  sex_indicators <- hectares_indicators %>%
+    dplyr::bind_rows(sales_indicators
+                     , producers_indicators
+                     , financing_indicators) %>%
+    dplyr::filter(disag1 == "Sex")
+
+  age_indicators <- hectares_indicators %>%
+    dplyr::bind_rows(sales_indicators
+                     , producers_indicators
+                     , financing_indicators) %>%
+    dplyr::filter(disag1 == "Age")
+
+  nonunique_indicators <- hectares_indicators %>%
+    dplyr::bind_rows(sales_indicators
+                     , producers_indicators
+                     , financing_indicators) %>%
+    dplyr::filter(! disag1 %in% c("Sex", "Age"))
+
 
   # Create implementing mechanisms lookup
   ims <- indicators_df %>%
-    dplyr::distinct(ro, ou, code, ac_name) %>%
+    dplyr::distinct(ro, ou, a_code, a_name) %>%
     dplyr::mutate(id = disR::return_id(.), .before = everything())
 
 
@@ -97,18 +181,26 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
                 , "Nigeria","Rwanda", "Senegal","Tanzania", "Uganda","Zambia")
     , ftf_target = TRUE)
 
-  save(indicators_df, indicators, values, ims, ftf_target_countries,
-       file = paste0(path_to_output, "/", db, ".Rdata"))
+  save(indicators_df, indicators, values, ims, ftf_target_countries
+       , hectares_indicators, sales_indicators, sex_indicators
+       , age_indicators, nonunique_indicators
+       , file = paste0(output_dir, "/", db, ".Rdata"))
+
+  write.csv(indicators_df, paste0(output_dir, "/", "indicators_df.csv"))
+  write.csv(indicators, paste0(output_dir, "/", "indicators.csv"))
+  write.csv(ims, paste0(output_dir, "/", "ims.csv"))
+  write.csv(values, paste0(output_dir, "/", "values.csv"))
 
 
-  ### Function for the extract database
+  ########## detailed db ################
   } else if (db == "extract") {
 
     gs4_auth()
 
     # load("../database/extract/indicators_db.Rdata")
-    dis_extract <- "DIS ENT - OU Activity Indicator Results (All Data)_20230622 Extract_Extract.csv"
-    dat <- read.csv(paste0(path_to_input, dis_extract))
+    # File name is: "DIS ENT - OU Activity Indicator Results (All Data)_20230622 Extract_Extract.csv"
+    input_file <- paste0(input_dir, "DIS ENT - OU Activity Indicator Results (All Data)_20230622 Extract_Extract.csv")
+    dat <- read.csv(input_file, colClasses=c("Activity.Code"="character"))
     dat <- dat %>%
       dplyr::rename(ro = Reporting.Organization
              , ou = Operating.Unit
@@ -171,15 +263,7 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
     #  list_rbind()
 
 
-
-
-    # Indicators lookup
-    disaggregate_countries <- dat %>%
-      dplyr::distinct(ic, a_code, udn, Disaggregate.Country) %>%
-      dplyr::mutate(id = disR::return_id(.), .before = everything()) %>%
-      dplyr::arrange(a_code)
-
-    # Indicators
+    ##### Indicators #############
     indicators <- dat %>% #select(-Disaggregate.Commodity) %>%
       dplyr::distinct(ic, udn, d_end, d_start
                , dplyr::across(tidyselect::starts_with("Disaggregate"))
@@ -191,7 +275,7 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
              , .before = tidyselect::everything())
 
 
-    ## Get UDN formulas from DIS (from Paul)
+    ##### Get UDN formulas from DIS (from Paul) ###########
     url <- "https://docs.google.com/spreadsheets/d/14iw2PRItDeB-OY8deb5klnN9HwbnhiAWv7DiTS5EwVo/edit#gid=1094963191"
     udns <- googlesheets4::read_sheet(url,  sheet = "FTF 20230915")  %>%
       dplyr::mutate(across(is.list, .fn = ~ as.character(unlist(.)))) %>%
@@ -229,12 +313,6 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
               , "Formula")
     udns <- dplyr::select(udns, tidyselect::all_of(cols))
 
-    ## Join udn formulas
-    list_udns <- function(x) {
-      stringr::str_replace_all(x, "[()/+*]|100|Manual|NA", " ") %>%
-        stringr::str_extract_all(stringr::boundary("word"))
-    }
-
     lapply(list_udns(udns$Formula)
            , FUN = function(x) paste(udns$ic, x))
 
@@ -254,7 +332,7 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
         dplyr::select(udns, -c(d_end, d_start, Disaggregate.Code, Disaggregate.Name)))
 
 
-    # Activities/ Implemenitng mechanisms lookup
+    # Activities/ Implemenitng mechanisms lookup ##################
     activities <- dat %>%
       dplyr::distinct(ro , ou, a_code, a_name, ip
                , a_end, a_start
@@ -264,7 +342,7 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
       dplyr::mutate(id = return_id(.), .before = tidyselect::everything())
 
 
-    # Countries
+    ###### Countries#####
     ftf_target_countries <- data.frame(
       country = c("Bangladesh","Democratic Republic of the Congo",
                   "Ethiopia","Ghana", "Guatemala","Honduras",
@@ -272,9 +350,8 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
                   "Mali","Mozambique", "Nepal","Niger",
                   "Nigeria","Rwanda","Senegal","Tanzania",
                   "Uganda","Zambia"), ftf_target = TRUE)
-
-    file_path <- paste0(path_to_input, "/ppp_countries.csv")
-    ppp_countries <- read.csv(file_path, "/ppp_countries.csv")
+    file_path <- paste0(input_dir, "ppp_countries.csv")
+    ppp_countries <- read.csv(file_path)
 
     countries <-  dat %>%
       dplyr::distinct(country = stringr::str_to_title(Disaggregate.Country)) %>%
@@ -282,6 +359,15 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
       dplyr::mutate(id = rownames(.), .before = tidyselect::everything()) %>%
       dplyr::left_join(ftf_target_countries) %>%
       dplyr::left_join(ppp_countries, dplyr::join_by(country == Disaggregate.Country))
+
+    ##### Countries disaggregate lookup ######
+    disaggregate_countries <- dat %>%
+      dplyr::distinct(ic, a_code, udn, Disaggregate.Country) %>%
+      dplyr::mutate(id = disR::return_id(.)
+                    , Disaggregate.Country = dplyr::na_if(Disaggregate.Country, "")
+                    , .before = everything()) %>%
+      dplyr::filter(!is.na(Disaggregate.Country)) %>%
+      dplyr::arrange(a_code)
 
     # Offices
     offices <- dat %>%
@@ -304,34 +390,34 @@ make_database <- function(path_to_input, path_to_output, db = "magnus", input_pa
       dplyr::mutate(id = return_id(.), .before = tidyselect::everything())
 
 
-    file_path <- paste0(path_to_input, "/API_PA.NUS.PPP_DS2_en_csv_v2_5734723.csv")
+    file_path <- paste0(input_dir, "/API_PA.NUS.PPP_DS2_en_csv_v2_5734723.csv")
     ppp <- read.csv(file_path, skip = 4) %>%
       dplyr::select(-`Indicator.Name`,- `Indicator.Code`) %>%
-      dplyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
+      tidyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
                    names_to = "year", values_to = "ppp_multiplier") %>%
       dplyr::mutate(year = as.integer(stringr::str_remove(year, "X"))) %>%
       dplyr::filter(!is.na(ppp_multiplier))
 
-    file_path <- paste0(path_to_input, "/API_PA.NUS.PRVT.PP_DS2_en_csv_v2_5734724.csv")
+    file_path <- paste0(input_dir, "/API_PA.NUS.PRVT.PP_DS2_en_csv_v2_5734724.csv")
     prvt_pp <- read.csv(file_path, skip = 4) %>%
       dplyr::select(-`Indicator.Name`,- `Indicator.Code`) %>%
-      dplyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
+      tidyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
                    names_to = "year", values_to = "prvt_pp") %>%
       dplyr::mutate(year = as.integer(stringr::str_remove(year, "X"))) %>%
       dplyr::filter(!is.na(prvt_pp))
 
-    file_path <- paste0(path_to_input, "/API_PA.NUS.FCRF_DS2_en_csv_v2_5729637.csv")
+    file_path <- paste0(input_dir, "/API_PA.NUS.FCRF_DS2_en_csv_v2_5729637.csv")
     exch_rate <- read.csv(file_path, skip = 4) %>%
       dplyr::select(-`Indicator.Name`,- `Indicator.Code`) %>%
-      dplyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
+      tidyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
                    names_to = "year", values_to = "exch_rate") %>%
       dplyr::mutate(year = as.integer(stringr::str_remove(year, "X"))) %>%
       dplyr::filter(!is.na(exch_rate))
 
-
-    # Write to files
-    save(indicators, activities, countries, ppp, prvt_pp, exch_rate
+    # save all objects to an Rdata file
+    save(indicators, activities, countries, disaggregate_countries, ppp, prvt_pp, exch_rate
          , ppp_countries, ftf_target_countries, offices, values, udns
-         , file = paste0(path_to_output, "/", db, ".Rdata"))
+         , file = paste0(output_dir, db, ".Rdata"))
+
   }
 }
