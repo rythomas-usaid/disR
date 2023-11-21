@@ -31,7 +31,7 @@ join_values_ims_budgets <- function(x) {
   left_join(ims, join_by(id_im == id)) %>%
   filter(ro == "USAID" & year %in% paste0("FY", 2018:2023)) %>%
   
-  group_by(ic_1819, ou, ro, year) %>%
+  group_by(uic, ou, ro, year) %>%
   summarise(value = sum(value, na.rm=T)) %>%
   
   # budgets
@@ -54,7 +54,7 @@ budgets <- read.xlsx("../../../database/ou_E3_budget.xlsx") %>%
 # EG.3-2
 ```{r}
 indicators %>%
-  filter(ic_1819 == "EG.3-2" & 
+  filter(uic == "EG.3-2" & 
            d2 == "People in USG-Assisted Private Sector Firms") %>%
   left_join(x = ., y = filter(values, type=="Actual")
                 , by = join_by(id == id_ind)
@@ -74,7 +74,7 @@ indicators %>%
 ```{r echo=F}
 
 indicators %>%
-  filter(ic_1819 == "EG.3.2-2")
+  filter(uic == "EG.3.2-2")
 
 filter_indicators(ind_code = "EG.3.2-2", dn = "Sex") %>%  
  join_values_ims_budgets()
@@ -87,7 +87,7 @@ filter_indicators(ind_code = "EG.3.2-2", dn = "Sex") %>%
 ind_code <- "EG.3.2-24/EG.3.2-x17"
 bind_rows({
   indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, ind_code) &
+      filter(str_detect(uic, ind_code) &
                if_any(everything(), ~str_detect(., ind_key)) ) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
       #                disaggregate = c("Crop Land|Cultivated Pasture|Aquaculture"))
@@ -105,7 +105,7 @@ bind_rows({
   }
   , {
   indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, ind_code) &
+      filter(str_detect(uic, ind_code) &
                if_any(everything(), ~str_detect(., ind_key)) &
                if_any(d1, ~str_detect(., "Producer"))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -124,7 +124,7 @@ bind_rows({
   }
   ,{
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, ind_code) &
+      filter(str_detect(uic, ind_code) &
                if_any(everything(), ~str_detect(., ind_key)) &
                if_any(d1, ~str_detect(., "Producer"))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -143,7 +143,7 @@ bind_rows({
   }
   , {
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, ind_code) &
+      filter(str_detect(uic, ind_code) &
                if_any(everything(), ~str_detect(., ind_key))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
       #                disaggregate = c("Crop Land|Cultivated Pasture|Aquaculture"))
@@ -152,7 +152,7 @@ bind_rows({
                 , suffix = c("_ind", "_val") # label variables 
                 , keep = FALSE)  %>% #distinct(year)
      
-      group_by(`Indicator Code`=ic_1819, `Type of beneficiary`=d1, Sex=d3, year) %>%
+      group_by(`Indicator Code`=uic, `Type of beneficiary`=d1, Sex=d3, year) %>%
       summarise(value = sum(value, na.rm=T)) %>%
       pivot_wider(names_from = c("year")
                   , values_from = "value"
@@ -227,7 +227,7 @@ cultivated_hectares_per_budget %>%
 ## Climate adaptive
 ```{r  echo=F}
 climate_hectares_per_budget <- indicators %>%  #Select all the indicators you want
-  filter_(ic_1819="EG.3.2-25/EG.3.2-x18"
+  filter_(uic="EG.3.2-25/EG.3.2-x18"
           , search= c("Sex", "Climate Adaptation")) %>%
   # filter(str_detect(d1, paste0(climate_adaptive_cultivated_land, collapse = "|")))
   filter_(d1 = climate_adaptive_cultivated_land) %>%  
@@ -263,7 +263,7 @@ ind_key <- "Sex"
 
 sales_value_per_budget <- indicators %>%  
   #Select all the indicators you want
-  filter(str_detect(ic_1819, ind_code) &
+  filter(str_detect(uic, ind_code) &
            if_any(everything(), ~str_detect(., ind_key)) &
            if_any(d4, ~str_detect(., "Value of Sales"))) %>%  
   join_values_ims_budgets()
@@ -272,7 +272,7 @@ sales_value_per_budget <- indicators %>%
 
 ```{r}
 sales_value_per_budget %>%
-  group_by(ic_1819, ou, ro) %>%
+  group_by(uic, ou, ro) %>%
   summarise(value = mean(value, na.rm=T)
             , budget = mean(budget, na.rm=T))
 ```
@@ -285,7 +285,7 @@ ind_code <- "EG.3.2-27/EG.3.2-x6"
 ind_key <- "Sex"
 value_of_financing_per_budet <- indicators %>%
   #Select all the indicators you want
-  filter((str_detect(ic_1819, ind_code) &
+  filter((str_detect(uic, ind_code) &
            if_any(everything(), ~str_detect(., ind_key)) &
             if_any(everything(), ~ str_detect(., "Value"))) |
            ic == "EG.3.2-x6" & str_detect(d1, "Sex")) %>%  
@@ -299,7 +299,7 @@ ind_code <- "EG.3.1-14/-15"
 ind_key <- "Sex"
 psi_per_budget <- indicators %>%
   #Select all the indicators you want
-  filter(str_detect(ic_1819, ind_code) & 
+  filter(str_detect(uic, ind_code) & 
            if_any(everything(), ~ str_detect(., "Private Sector"))) %>%  
   join_values_ims_budgets()
 
@@ -319,9 +319,9 @@ results_per_budget <- bind_rows(individuals_by_budget
           , value_of_financing_per_budet
           , psi_per_budget) %>%
   filter(year %in% paste0("FY", 2018:2022)) %>%
-  group_by(ic_1819, ou) %>%
+  group_by(uic, ou) %>%
   summarise(value = mean(value, na.rm=T))  %>%
-  pivot_wider(id_cols = ou, names_from = ic_1819, values_from = value) %>%
+  pivot_wider(id_cols = ou, names_from = uic, values_from = value) %>%
   left_join(mean_budget, join_by(ou)) %>%
   left_join(ftf_target_countries, join_by(ou==country)) %>%
   filter(ftf_target == TRUE)

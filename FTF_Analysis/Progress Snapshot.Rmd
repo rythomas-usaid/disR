@@ -20,7 +20,7 @@ load("../../data/basic.Rdata")
 # EG.3.2-2 Higher ed institutions
 ```{r echo=F}
 indicators %>%  #Select all the indicators you want
-      filter(ic_1819=="EG.3.2-2" &
+      filter(uic=="EG.3.2-2" &
                if_any(everything(), ~str_detect(., "Sex"))) %>% 
       
       left_join(x = ., y = filter(values, type=="Actual")
@@ -42,7 +42,7 @@ indicators %>%  #Select all the indicators you want
 ```{r echo=F}
 bind_rows({
   indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-24/EG.3.2-x17") &
+      filter(str_detect(uic, "EG.3.2-24/EG.3.2-x17") &
                if_any(everything(), ~str_detect(., "Sex")) ) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
       #                disaggregate = c("Crop Land|Cultivated Pasture|Aquaculture"))
@@ -60,7 +60,7 @@ bind_rows({
   }
   , {
   indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-24/EG.3.2-x17") &
+      filter(str_detect(uic, "EG.3.2-24/EG.3.2-x17") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d1, ~str_detect(., "Producer"))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -79,7 +79,7 @@ bind_rows({
   }
   ,{
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-24/EG.3.2-x17") &
+      filter(str_detect(uic, "EG.3.2-24/EG.3.2-x17") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d1, ~str_detect(., "Producer"))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -98,7 +98,7 @@ bind_rows({
   }
   , {
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-24/EG.3.2-x17") &
+      filter(str_detect(uic, "EG.3.2-24/EG.3.2-x17") &
                if_any(everything(), ~str_detect(., "Sex"))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
       #                disaggregate = c("Crop Land|Cultivated Pasture|Aquaculture"))
@@ -107,7 +107,7 @@ bind_rows({
                 , suffix = c("_ind", "_val") # label variables 
                 , keep = FALSE)  %>% #distinct(year)
      
-      group_by(`Indicator Code`=ic_1819, `Type of beneficiary`=d1, Sex=d3, year) %>%
+      group_by(`Indicator Code`=uic, `Type of beneficiary`=d1, Sex=d3, year) %>%
       summarise(value = sum(value, na.rm=T)) %>%
       pivot_wider(names_from = c("year")
                   , values_from = "value"
@@ -124,7 +124,7 @@ bind_rows({
 ```{r echo=F}
 bind_rows({
   indicators %>%
-    filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+    filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
                if_any(everything(), ~str_detect(., "Sex"))) %>%
     left_join(x = ., y = filter(values, type=="Actual")
                 , by = join_by(id == id_ind)
@@ -140,7 +140,7 @@ bind_rows({
   }
   , {
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+      filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d1, ~str_detect(., c("Crop Land|Cultivated Pasture|Cultivated Land|Aquaculture")))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -159,7 +159,7 @@ bind_rows({
   },
   {
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+      filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d1, ~str_detect(., c("Crop Land|Cultivated Pasture|Cultivated Land")))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -178,7 +178,7 @@ bind_rows({
   }
   , {
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+      filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
                if_any(everything(), ~str_detect(., "sex")) &
                if_any(d1, ~str_detect(., c("Conservation/Protected Area|Freshwater or Marine Ecosystems|Rangeland")))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -197,7 +197,7 @@ bind_rows({
   }
   ,{
     indicators %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+      filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d1, ~str_detect(., c("Other")))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -221,7 +221,7 @@ bind_rows({
 ```{r  echo=F}
 bind_rows({
   indicators_df %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+      filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
                if_any(everything(), ~str_detect(., "Sex"))) %>% 
 
       arrange(year) %>%
@@ -235,7 +235,7 @@ bind_rows({
   }
   ,{
   indicators_df %>%  #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+      filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d1, ~str_detect(., c("Crop Land|Cultivated Pasture|Cultivated Land")))) %>%
 
@@ -253,7 +253,7 @@ bind_rows({
 ## Type of hectare by sex and climate disaggs
 ```{r  echo=F}
 indicators %>%  #Select all the indicators you want
-  filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+  filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
            if_any(everything(), ~str_detect(., c("Sex|Climate Adaptation"))) &
                if_any(d1, ~str_detect(., c("Crop Land|Cultivated Pasture|Aquaculture|Conservation/Protected Area|Freshwater or Marine Ecosystems|Rangeland|Other")))) %>%
   left_join(x = ., y = filter(values, type=="Actual")
@@ -273,7 +273,7 @@ indicators %>%  #Select all the indicators you want
 ## Legacy type of hectare by sex and climate disaggs
 ```{r  echo=F}
 indicators %>%  #Select all the indicators you want
-  filter(str_detect(ic_1819, "EG.3.2-25/EG.3.2-x18") &
+  filter(str_detect(uic, "EG.3.2-25/EG.3.2-x18") &
            if_any(everything(), ~str_detect(., c("Sex|Climate"))) &
                if_any(d1, ~str_detect(., c("Cultivated Land")))) %>%
   left_join(x = ., y = filter(values, type=="Actual")
@@ -294,7 +294,7 @@ indicators %>%  #Select all the indicators you want
 bind_rows({
   indicators %>%  
   #Select all the indicators you want
-  filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19") &
+  filter(str_detect(uic, "EG.3.2-26/EG.3.2-x19") &
            if_any(everything(), ~str_detect(., "Sex")) &
            if_any(d4, ~str_detect(., "Value of Sales"))) %>% 
   # sum_indicators(ind_code = ind_code, total = T, 
@@ -317,7 +317,7 @@ bind_rows({
   , {
     indicators %>%  
       #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19") &
+      filter(str_detect(uic, "EG.3.2-26/EG.3.2-x19") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d4, ~str_detect(., "Value of Sales"))) %>% 
       # sum_indicators(ind_code = ind_code, total = T, 
@@ -339,7 +339,7 @@ bind_rows({
   , {
     indicators %>%  
       #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19") &
+      filter(str_detect(uic, "EG.3.2-26/EG.3.2-x19") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d4, ~str_detect(., "Value of Sales")) &
                if_any(d2,~str_detect(., "Producer - Smallholder"))) %>% 
@@ -362,7 +362,7 @@ bind_rows({
   , {
     indicators %>%  
       #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19") &
+      filter(str_detect(uic, "EG.3.2-26/EG.3.2-x19") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d4, ~str_detect(., "Value of Sales")) &
                if_any(d2,~str_detect(., "Producer - Non-Smallholder"))) %>% 
@@ -386,7 +386,7 @@ bind_rows({
   ,{
     indicators %>%  
       #Select all the indicators you want
-      filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19") &
+      filter(str_detect(uic, "EG.3.2-26/EG.3.2-x19") &
                if_any(everything(), ~str_detect(., "Sex")) &
                if_any(d4, ~str_detect(., "Value of Sales")) &
                if_any(d2,~str_detect(., "Firm"))) %>% 
@@ -418,7 +418,7 @@ bind_rows({
 bind_rows({
   indicators %>%
   #Select all the indicators you want
-  filter((str_detect(ic_1819, "EG.3.2-27/EG.3.2-x6") &
+  filter((str_detect(uic, "EG.3.2-27/EG.3.2-x6") &
            if_any(everything(), ~str_detect(., "Sex")) &
             if_any(everything(), ~ str_detect(., "Value"))) |
            ic == "EG.3.2-x6" & str_detect(d1, "Sex")) %>%
@@ -442,7 +442,7 @@ bind_rows({
   indicators %>%
       #Select all the indicators you want
       filter(
-        (str_detect(ic_1819, "EG.3.2-27/EG.3.2-x6") &
+        (str_detect(uic, "EG.3.2-27/EG.3.2-x6") &
                 if_any(everything(), ~str_detect(., "Sex")) &
               if_any(everything(), ~ str_detect(., "Value"))
          ) |
@@ -473,7 +473,7 @@ bind_rows({
   indicators %>%  
       #Select all the indicators you want
       filter(
-        (str_detect(ic_1819, "EG.3.2-27/EG.3.2-x6") &
+        (str_detect(uic, "EG.3.2-27/EG.3.2-x6") &
            if_any(everything(), ~str_detect(., "Sex")) &
            if_any(everything(), ~ str_detect(., "Value")) &
            if_any(everything(), ~ str_detect(., "Cash Debt")  )
@@ -499,7 +499,7 @@ bind_rows({
 , {
   indicators %>%  
   #Select all the indicators you want
-  filter((str_detect(ic_1819, "EG.3.2-27/EG.3.2-x6") &
+  filter((str_detect(uic, "EG.3.2-27/EG.3.2-x6") &
            if_any(everything(), ~str_detect(., "Sex")) &
             if_any(everything(), ~ str_detect(., "Value"))) |
            ic == "EG.3.2-x6" & str_detect(d1, "Sex")) %>% 
@@ -523,7 +523,7 @@ bind_rows({
 , {
    indicators %>%  
   #Select all the indicators you want
-  filter((str_detect(ic_1819, "EG.3.2-27/EG.3.2-x6") &
+  filter((str_detect(uic, "EG.3.2-27/EG.3.2-x6") &
            if_any(everything(), ~str_detect(., "Sex")) &
             if_any(everything(), ~ str_detect(., "Value")) &
            if_any(everything(), ~ str_detect(., "Cash Debt") )) |
@@ -553,7 +553,7 @@ bind_rows({
 bind_rows({
   indicators %>%  
   #Select all the indicators you want
-  filter(str_detect(ic_1819, "EG.3.2-27/EG.3.2-x6") &
+  filter(str_detect(uic, "EG.3.2-27/EG.3.2-x6") &
            if_any(everything(), ~str_detect(., "Sex")) &
             if_any(everything(), ~ str_detect(., "Number"))) %>% 
     mutate(d4 = if_else(ic == "EG.3.2-x6", d2 , d4)) %>%
@@ -576,7 +576,7 @@ bind_rows({
 , {
    indicators %>%  
   #Select all the indicators you want
-  filter(str_detect(ic_1819, "EG.3.2-27/EG.3.2-x6") &
+  filter(str_detect(uic, "EG.3.2-27/EG.3.2-x6") &
            if_any(everything(), ~str_detect(., "Sex")) &
             if_any(everything(), ~ str_detect(., "Number")) &
            if_any(everything(), ~ str_detect(., "Cash Debt") )) %>% 
@@ -604,7 +604,7 @@ bind_rows({
 bind_rows({
   indicators %>%
   #Select all the indicators you want
-  filter(str_detect(ic_1819, "EG.3.1-14/-15") & 
+  filter(str_detect(uic, "EG.3.1-14/-15") & 
            if_any(everything(), ~ str_detect(., "Private Sector"))) %>% 
   # sum_indicators(ind_code = ind_code, total = T, 
   #                disaggregate = c("Crop Land|Cultivated Pasture|Aquaculture"))

@@ -65,7 +65,7 @@ correct_headcount <- function(x) {
     warning("Assuming you have filtered to the correct columns!")
   x %>% # Group the data by specified columns and calculate the sum of 'value'
    # Reshape the data from long to wide format with 'ic' as column names
-  select(-ic_1819) %>% pivot_wider(names_from = ic, values_from = value) %>%
+  select(-uic) %>% pivot_wider(names_from = ic, values_from = value) %>%
   # Create a new column 'Hybrid' based on conditions
   
   rename( IM_Level_Sum = `EG.3-2`
@@ -452,13 +452,13 @@ dat[sapply(dat, is.infinite)] <- NA
 ```
 
 ```{r include = F}
-
-load("../../data/extract.Rdata")
-
-activities %>%
-  filter(a_name %in% big_diff_codes$a_name) %>%
-  arrange(as.Date(a_end, "mm/dd/yyyy")) %>%
-  filter(ou == "Uganda (UGANDA)")
+# 
+# load("../../data/extract.Rdata")
+# 
+# activities %>%
+#   filter(a_name %in% big_diff_codes$a_name) %>%
+#   arrange(as.Date(a_end, "mm/dd/yyyy")) %>%
+#   filter(ou == "Uganda (UGANDA)")
 
 ```
 
@@ -492,10 +492,19 @@ Others would require additional research to explain why they lost participation 
 
 - Next, look at the count of participants being reported in other indicators (EG.3.2-24 sum of sex, EG.3.2-26 highest 'number of participant producers' or 'number of participant firms' from a single commodity or 'Type of Product' or 'Type of Service', and EG.3.2-27 'number of recipients').
 - Look at the Activity/IM-level (USAID only; FY18-22) and see if any IM has reported a higher participant count in these other indicators than in EG.3-2.  
-- Flag these instances in a table.  Alert me if the counts seems way higher than our overall EG.3-2 headcount in any year FY18-22.
+- Flag these instances in a table. Alert me if the counts seems way higher than our overall EG.3-2 headcount in any year FY18-22.
 ```{r}
-sex_indicators %>%
-  filter(str_detect(ic_1819, "EG.3.2-26/EG.3.2-x19_number") &
+# Max commodity participant producers
+commodity_indicators %>%
+  filter(str_detect(uic, "EG.3.2-26/EG.3.2-x19") &
+           str_detect(disag3, " Smallholder"))
+```
+
+
+```{r}
+# number of participant producers
+sum_activity_product <- sex_indicators %>%
+  filter(str_detect(uid, "EG.3.2-26/EG.3.2-x19_product_number") &
            str_detect(disag3, " Smallholder")) %>%
   left_join(x = ., y = filter(values, type == "Actual"),
             by = join_by(id == id_ind),
@@ -505,7 +514,23 @@ sex_indicators %>%
   # left_join with 'ims' data based on 'id_im' and 'id'
   left_join(x = ., y = ims,
             by = join_by(id_im == id)) %>%
-  group_by(ro, ou, year)
+  group_by(ro, ou, year) %>%
+  summarise(sum_activity_product = sum_(value))
+
+sum_activity_recipients <- sex_indicators %>%
+  filter(str_starts(uic, "EG.3.2-27/EG.3.2-x6") & str_ends(uid, "_number")) %>%
+  left_join(x = ., y = filter(values, type == "Actual"),
+            by = join_by(id == id_ind),
+            suffix = c("_ind", "_val"), # Label variables
+            keep = FALSE) %>%
+  # Distinct(year) is commented out
+  # left_join with 'ims' data based on 'id_im' and 'id'
+  left_join(x = ., y = ims,
+            by = join_by(id_im == id)) %>%
+  group_by(ro, ou, year) %>%
+  summarise(sum_activity_recipients = sum_(value))
+
+headcount_ou %>% set_disaggs()  %>% filter(d2 == "Total")
 ```
 
 
