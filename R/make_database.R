@@ -17,7 +17,9 @@
 #' @import googlesheets4
 #'
 #' @export
-make_database <- function(input_dir, output_dir, db = "basic") {
+make_database <- function(input_dir = "../../indicators/basic/"
+                          , output_dir = "../data/"
+                          , db = "basic") {
 
     return_id <- function(row) {
     l <- round(log10(nrow(row))+1,0)
@@ -31,7 +33,7 @@ make_database <- function(input_dir, output_dir, db = "basic") {
         stringr::str_extract_all(stringr::boundary("word"))
     }
 
-########## basic db ################
+# Basic db ################
 
   if(db == "basic") {
     indicator_files <- list.files(input_dir, pattern = "xlsx")
@@ -43,7 +45,7 @@ make_database <- function(input_dir, output_dir, db = "basic") {
     dplyr::filter(!is.na(value)) %>%
     dplyr::mutate(year = paste0("FY", year)) %>%
     #indicators_df <-   indicators_df %>%
-    dplyr::mutate(ic_1819 = dplyr::case_when(
+    dplyr::mutate(uic = dplyr::case_when(
       ic %in% c("EG.3.2-25","EG.3.2-x18") ~ "EG.3.2-25/EG.3.2-x18"
       , ic %in% c("EG.3.2-24", "EG.3.2-x17") ~ "EG.3.2-24/EG.3.2-x17"
       , ic %in% c("EG.3.2-26", "EG.3.2-x19") ~ "EG.3.2-26/EG.3.2-x19"
@@ -52,22 +54,23 @@ make_database <- function(input_dir, output_dir, db = "basic") {
       , .default = ic)
       , .after = ic)  %>%
     dplyr::mutate(disagg_group = paste(d1, d2, d3, d4, sep=" / ")) %>%
-    dplyr::mutate(indicator_name = dplyr::case_when(
+    dplyr::mutate(uid = dplyr::case_when(
       dplyr::if_any(tidyselect::everything()
                     , ~ stringr::str_detect(., "Value of Sales")) ~
-        paste0(ic_1819, "_value")
+        paste0(uic, "_value")
       , dplyr::if_any(tidyselect::everything()
                       , ~ stringr::str_detect(., "Number of Participants")) ~
-        paste0(ic_1819, "_number")
+        paste0(uic, "_number")
       , dplyr::if_any(tidyselect::everything()
                       , ~ stringr::str_detect(., "Volume of Sales")) ~
-        paste0(ic_1819, "_volume")
-      , .default = ic_1819))
+        paste0(uic, "_volume")
+      , .default = uic)) %>%
+    dplyr::mutate()
 
 
   # Create disaggregates lookup
   indicators <- indicators_df %>%
-    dplyr::distinct(ic, ic_1819, d1, d2, d3, d4) %>%
+    dplyr::distinct(ic, uic, d1, d2, d3, d4) %>%
     dplyr::mutate(id = disR::return_id(.), .before = everything()) %>%
     #encode combination categories
     # https://docs.google.com/document/d/1qwfBlce3UUmMzKY7ABCMcb_Tx_Mb7d7IeKHUn-5zhlU/edit
@@ -83,61 +86,88 @@ make_database <- function(input_dir, output_dir, db = "basic") {
             d1 %in% c("Conservation/Protected Area"
                       , "Freshwater or Marine Ecosystems", "Rangeland") &
             d2 =="Sex" ~ "Extensively managed"
-      , .default = NA))
+      , .default = NA)
+      , .after = everything())
 
-  # resequence the “order” of disaggregates
-  hectares_indicators <- indicators %>%
-    dplyr::filter(ic_1819 == "EG.3.2-25/EG.3.2-x18" ) %>%
+###### Sex and age indicators ######
+
+##### EG.3.2-24/x17 #####
+  producers_indicators <- indicators %>%
+    dplyr::filter(uic == "EG.3.2-24/EG.3.2-x17" & d2 !=  "Commodity") %>%
     dplyr::mutate(disag1 = d2
                   , disag2 = d3
                   , disag3 = d1) %>%
     dplyr::select(-c(d1, d2, d3, d4))
 
+
+###### EG.3.2-25/x18 #####
+  hectares_indicators <- indicators %>%
+    dplyr::filter(uic == "EG.3.2-25/EG.3.2-x18" & d2 != "Commodity") %>%
+    dplyr::mutate(disag1 = d2
+                  , disag2 = d3
+                  , disag3 = d1) %>%
+    dplyr::select(-c(d1, d2, d3, d4))
+
+  ###### EG.3.2-26/x19 #####
   sales_indicators <- indicators %>%
-    dplyr::filter(ic_1819 == "EG.3.2-26/EG.3.2-x19" ) %>%
-    dplyr::mutate(ic_1819 = case_when(
-      stringr::str_detect(d4, "Value") ~ paste0(ic_1819, "_value")
-      , stringr::str_detect(d4, "Number") ~ paste0(ic_1819, "_number")
-      , stringr::str_detect(d4, "Volume") ~ paste0(ic_1819, "_volume"))
-      , .after = ic_1819) %>%
+    dplyr::filter(uic == "EG.3.2-26/EG.3.2-x19" & d1 != "Commodity") %>%
+
+    # Make UID
+    dplyr::mutate(uid = case_when(
+      stringr::str_detect(d1, "Type of Product") ~ paste0(uic, "_product")
+      , stringr::str_detect(d1, "Type of Service") ~ paste0(uic, "_service")
+      , .default = uic)
+      , .after = uic) %>%
+    dplyr::mutate(uid = case_when(
+      stringr::str_detect(d4, "Value") ~ paste0(uid, "_value")
+      , stringr::str_detect(d4, "Number") ~ paste0(uid, "_number")
+      , stringr::str_detect(d4, "Volume") ~ paste0(uid, "_volume"))
+      , .after = uic) %>%
 
     # encode combination categories
     # https://docs.google.com/document/d/1qwfBlce3UUmMzKY7ABCMcb_Tx_Mb7d7IeKHUn-5zhlU/edit
     dplyr::mutate(disag1 = d3
                   , disag2 = sub(" -.*", "", d4)
                   , disag3 = d2
-                  , disag4 = d1) %>%
+                  , disag4 = sub(".*: ", "", d1)) %>%
     dplyr::select(-c(d1, d2, d3, d4))
 
-  producers_indicators <- indicators %>%
-    dplyr::filter(ic_1819 == "EG.3.2-24/EG.3.2-x17" ) %>%
-    dplyr::mutate(disag1 = d2
-                  , disag2 = d3
-                  , disag3 = d1) %>%
-    dplyr::select(-c(d1, d2, d3, d4))
-
+  ###### EG.3.2-27/x6 ####
   financing_indicators <- indicators %>%
-    dplyr::filter(ic_1819 == "EG.3.2-27/EG.3.2-x6") %>%
-    dplyr::mutate(ic_1819 = case_when(
-      stringr::str_detect(d2, "Value") ~ paste0(ic_1819, "_value")
-      , stringr::str_detect(d2, "Number") ~ paste0(ic_1819, "_number")
-      , stringr::str_detect(d2, "Volume") ~ paste0(ic_1819, "_volume"))
-      , .after = ic_1819) %>%
+    dplyr::filter(uic == "EG.3.2-27/EG.3.2-x6") %>%
+
+    # Make UID
+    dplyr::mutate(uid = case_when(
+      stringr::str_detect(d3, "Producer") ~ paste0(uic, "_producer")
+      , stringr::str_detect(d3, "Firm") ~ paste0(uic, "_firm")
+      , .default = uic)
+      , .after = uic) %>%
+    dplyr::mutate(uid = case_when(
+      stringr::str_detect(d2, "Value") ~ paste0(uid, "_value")
+      , stringr::str_detect(d2, "Number") ~ paste0(uid, "_number")
+      , stringr::str_detect(d2, "Volume") ~ paste0(uid, "_volume")
+      , .default = uic)
+      , .after = uic) %>%
+
+    # fix D3
     dplyr::mutate(d3 = case_when(
       stringr::str_detect(d3, "Sex") ~ "Sex"
       , stringr::str_detect(d3, "Age") ~ "Age"
       , stringr::str_detect(d3, "Size") ~ "Size")
       , .after = d2) %>%
     # distinct(d1, d2)
+
+    # Fix D1
     dplyr::filter(d1 %in% c("Type of Financing Accessed: Cash Debt"
                             ,"Type of Financing Accessed: In-Kind Debt"
                             , "Type of Financing Accessed: Non-Debt" )) %>%
     dplyr::mutate(d1 = sub(".*: ", "", d1)) %>%
     dplyr::mutate(disag1 = d3
                   , disag2 = d4
-                  , disag3 = d1) %>%
+                  , disag3 = sub("*.-", "", d1)) %>%
     dplyr::select(-c(d1, d2, d3, d4))
 
+  ##### Sex indicators #####
   # Filter unique on the reorganized indicators
   sex_indicators <- hectares_indicators %>%
     dplyr::bind_rows(sales_indicators
@@ -145,19 +175,58 @@ make_database <- function(input_dir, output_dir, db = "basic") {
                      , financing_indicators) %>%
     dplyr::filter(disag1 == "Sex")
 
+  ##### Age indicators #####
   age_indicators <- hectares_indicators %>%
     dplyr::bind_rows(sales_indicators
                      , producers_indicators
                      , financing_indicators) %>%
     dplyr::filter(disag1 == "Age")
 
-  nonunique_indicators <- hectares_indicators %>%
+  ##### Commodity indicators #####
+  commodity_indicators <- indicators %>%
+    dplyr::filter(if_any(everything(), ~ stringr::str_detect(., "Commodity"))) %>%
+    #dplyr::filter(uic == "EG.3.2-24/EG.3.2-x17" & d2 !=  "Commodity") %>%
+
+    # Reorder EG.3.2-24/EG.3.2-x17
+    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-24/EG.3.2-x17" ~ d2)
+                  , disag2 = case_when(uic == "EG.3.2-24/EG.3.2-x17" ~ d3)
+                  , disag3 = case_when(uic == "EG.3.2-24/EG.3.2-x17" ~ d1)) %>%
+    # Reorder EG.3.2-25/EG.3.2-x18
+    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-25/EG.3.2-x18" ~ d2)
+                  , disag2 = case_when(uic == "EG.3.2-25/EG.3.2-x18" ~ d3)
+                  , disag3 = case_when(uic == "EG.3.2-25/EG.3.2-x18" ~ d1)) %>%
+    # Reorder EG.3.2-26/EG.3.2-x19
+    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ d3)
+                  , disag2 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ sub(" -.*", "", d4))
+                  , disag3 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ d2)
+                  , disag4 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ sub(".*: ", "", d1))) %>%
+    # Reorder EG.3.2-27/EG.3.2-x6
+    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-27/EG.3.2-x6" ~ d3)
+                  , disag2 = case_when(uic == "EG.3.2-27/EG.3.2-x6" ~ d4)
+                  , disag3 = case_when(uic == "EG.3.2-27/EG.3.2-x6" ~ sub("*.-", "", d1)))
+
+    # Make UID
+    dplyr::mutate(uid = case_when(
+      stringr::str_detect(d3, "Producer") ~ paste0(uic, "_producer")
+      , stringr::str_detect(d3, "Firm") ~ paste0(uic, "_firm")
+      , .default = uic)
+      , .after = uic) %>%
+
+    # encode combination categories
+    # https://docs.google.com/document/d/1qwfBlce3UUmMzKY7ABCMcb_Tx_Mb7d7IeKHUn-5zhlU/edit
+    dplyr::mutate(disag1 = d3
+                  , disag2 = sub(" -.*", "", d4)
+                  , disag3 = d2
+                  , disag4 = sub(".*: ", "", d1))
+
+  non_agesex_indicators <-
     dplyr::bind_rows(sales_indicators
                      , producers_indicators
                      , financing_indicators) %>%
     dplyr::filter(! disag1 %in% c("Sex", "Age"))
 
 
+###### Other Tables #########
   # Create implementing mechanisms lookup
   ims <- indicators_df %>%
     dplyr::distinct(ro, ou, a_code, a_name) %>%
@@ -182,8 +251,11 @@ make_database <- function(input_dir, output_dir, db = "basic") {
     , ftf_target = TRUE)
 
   save(indicators_df, indicators, values, ims, ftf_target_countries
-       , hectares_indicators, sales_indicators, sex_indicators
-       , age_indicators, nonunique_indicators
+
+       , hectares_indicators, sales_indicators, producers_indicators, financing_indicators
+
+       , sex_indicators, age_indicators, commodity_indicators, non_agesex_indicators
+
        , file = paste0(output_dir, "/", db, ".Rdata"))
 
   write.csv(indicators_df, paste0(output_dir, "/", "indicators_df.csv"))
@@ -192,7 +264,9 @@ make_database <- function(input_dir, output_dir, db = "basic") {
   write.csv(values, paste0(output_dir, "/", "values.csv"))
 
 
-  ########## detailed db ################
+
+# Detailed db #########
+
   } else if (db == "extract") {
 
     gs4_auth()
