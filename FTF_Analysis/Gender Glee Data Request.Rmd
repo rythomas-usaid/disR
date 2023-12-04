@@ -16,7 +16,7 @@ library(disR)
 
 
 ```{r}
-load("../../../database/data/extract.Rdata")
+load("../../data/extract.Rdata")
 
 gender_finance <- filter_indicators(ind_code = "EG.3.2-27", dn = "Sex") %>% 
    
@@ -246,4 +246,5 @@ all_data <- all_data %>% filter(ou %in% participants) %>% arrange(ou)
 map2(.x = all_data$ou
      , .y = all_data$data
      , .f = ~ sheet_write(.y, ss=glee_sheet, as.character(.x)), quitely= T)
+
 ```
