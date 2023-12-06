@@ -1,0 +1,72 @@
+---
+title: "Google sheets demo"
+author: "Ryan Thomas"
+date: "2023-11-29"
+output: html_document
+---
+```{r include=F}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+## Install the packages if necessary. Then load them.
+
+```{r setup}
+# install.packages("googlesheets4")
+# install.packages("googledrive")
+library(googlesheets4)
+library(googledrive)
+```
+
+
+## Authenticate into your GDrive account.
+```{r }
+# you will need to authenticate manually
+# drive_auth()
+```
+
+There are three steps:
+- creating the folder, 
+- creating the sheet in your My Drive, and 
+- moving the new sheet to the new folder. 
+
+To create the new directory, use googledrive package.
+
+##  Find a parent directory manually. 
+Use Ryan's DIS data folder to create a test.
+```{r }
+# Test folder ID:
+# 1Uj8tO8QVMs30GeAN67_cLQA-d6uL1cDb
+
+# Write a new directory; save the output to a variable new_dir
+new_dir <- drive_mkdir(name = "test"
+                       , path = as_id("1Uj8tO8QVMs30GeAN67_cLQA-d6uL1cDb")
+                       , overwrite = TRUE) 
+
+# each new session you need to authenticate
+```
+
+## Write a new sheet.
+```{r }
+# Name the sheet
+name <- "All Indicators Up to FY22"
+
+# create a new sheet in your My Drive
+gs4_create(name = name)
+# each new session you need to authenticate
+
+new_sheet <- drive_mv(file = paste0("~/", name) # sheet location
+                      , path = as_id(new_dir$id) # path of new directory
+                      , overwrite = TRUE)
+```
+
+## Add some data to the new sheet.
+```{r }
+# load some data or make a test
+dat <- data.frame(kyle = c("is", "the", "best")
+                  , ryan = c("pretty", "good", "too"))
+# load("../../data/basic.Rdata")
+
+sheet_write(dat # data you want to write
+            , ss = new_sheet$id # Sheet ID
+            , sheet = "Test")   # Tab name
+```
