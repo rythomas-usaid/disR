@@ -177,38 +177,52 @@ rm(check_2)
 ```
 
 ```{r check 3: flag any activity that reported sex entirely DNA}
-#need to figure out how to select sex disaggregates only
-check_3 <- data3 %>% filter(`Collection Period Name` == "FY2023-Actual") %>% 
+#need to figure out h
+check_3 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>% 
                      select(`Activity Name`, `Activity Code`, `Indicator Code`, 
-                            `Disaggregate Country`,  `Disaggregate Commodity`, `UDN`,
+                            `Disaggregate Country`,`Disaggregate Commodity`, `UDN`,
                             `Disaggregate Name`,`Fiscal Year`, Actual_value) %>%
-                    mutate(disaggregate_type = case_when(UDN == "3.1.1" ~ "sex",
-                                                         UDN == "3.1.2" ~ "sex",
-                                                         UDN == "3.1.3" ~ "sex",
-                                                         UDN == "3.1.4" ~ "sex",
-                                                         UDN == "3.1.5" ~ "sex")) %>% 
-  #in instances when UDN starts with 3.1 assign disaggrgate_type "sex" everything else will be NA
-#drop NAs, we are left with only the sex disaggregates for each indicator
-                     drop_na(disaggregate_type)
+                     mutate(disaggregate_type = case_when(str_detect(`Disaggregate Name`, c("Male", "Female", "Neither", "Disaggregates Not Available")) ~ "sex")) %>% #if a disaggregate name contains any of the gender disagg names, label it sex, drop others
+                    drop_na(disaggregate_type)
 
-check_3_a <- check_3 %>% group_by(`Activity Code`, `Indicator Code`, `Disaggregate Country`) %>% mutate(group_id = cur_group_id()) %>%
-  ungroup() #group by indicator and assign and id to each unique activity/indicator combo
+# #get one row for each activity/indicator with all sex disaggregates as columns
+# check_3_a <- check_3 %>% group_by(`Activity Code`, `Indicator Code`, `Disaggregate Country`) %>% 
+#                           pivot_wider(id_cols = c(`Activity Code`, `Activity Name`), 
+#                                        names_from = 'Disaggregate Name',
+#                                        values_from = Actual_value)  
+# 
+# #
+# mutate(issue = case_when()) all columns except disagg not available are NA, flag as reporting only sex DNA
 
-  
-#now pivot wider based on that group id 
-check_3_b <- check_3_a %>% pivot_wider(names_from = 'Disaggregate Name',
-                                       values_from = Actual_value)  
-
-rm(check_3, check_3_a)
+rm(check_3)
 
 ```
 
 ```{r check 4: flag any indicator where sex and age targets are blank}
+#adapt this from check 3 if we can get check 3 to work
+```
+
+```{r check 5: New! flag any activity that reported sex entirely DNA} }
+#select relevant info
+#see check 3, if we can get it to work go from there
+check_5 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%             
+                      select(`Activity Name`, `Activity Code`, `Indicator Code`, 
+                             `Disaggregate Country`, `Disaggregate Name`, Actual_value) %>%
+                      
+                      
+                      
+
+#select only sex disagg reporting
+
+
+#select only instances where all are NA except DNA
+
+
 ```
 
 
-```{r check 5: is EG.3.2-24 less than EG.3-2?}
-check_5 <- data3 %>% filter(`Indicator Code` == "EG.3.2-24" | `Indicator Code` == "EG.3-2",
+```{r check 6: is EG.3.2-24 less than EG.3-2?}
+check_6 <- data3 %>% filter(`Indicator Code` == "EG.3.2-24" | `Indicator Code` == "EG.3-2",
                             `Indicator Code` == `Disaggregate Code`,  
                             `Collection Period Name` == "FY2023-Annual") %>% 
 #select the two indicators we are interested in, select only disaggregate totals (where indicator code and disaggregate code are equal), select only the year we are working with and only actual values                      
@@ -217,63 +231,116 @@ check_5 <- data3 %>% filter(`Indicator Code` == "EG.3.2-24" | `Indicator Code` =
                                       `Deviation Narrative`))#drop a few columns we don't need including disaggregate code since now it is duplicated with indicator code
 
 #check for dupes
-check <- get_dupes(check_5, `Activity Code`, `Indicator Code`, `Fiscal Year`, `Disaggregate Country`)
+check <- get_dupes(check_6, `Activity Code`, `Indicator Code`, `Fiscal Year`, `Disaggregate Country`)
 
 rm(check)
 
-check_5_a <- check_5 %>% group_by(`Activity Code`, `Disaggregate Country`) %>%
+check_6_a <- check_5 %>% group_by(`Activity Code`, `Disaggregate Country`) %>%
                          pivot_wider(names_from = `Indicator Code`,
                                      values_from = Actual_value)
 
-check <- get_dupes(check_5_a, `Activity Code`, `Fiscal Year`, `Disaggregate Country`)
+check <- get_dupes(check_6_a, `Activity Code`, `Fiscal Year`, `Disaggregate Country`)
 
 rm(check)
 
-check_5_b <- check_5_a %>% mutate(issue = case_when(`EG.3.2-24` > `EG.3-2`~ "EG.3.2-24 has higher reported value than EG.3-2",
+check_6_b <- check_6_a %>% mutate(issue = case_when(`EG.3.2-24` > `EG.3-2`~ "EG.3.2-24 has higher reported value than EG.3-2",
                                           !is.na(`EG.3.2-24`) & is.na(`EG.3-2`) ~ "EG.3.2-24 reported, EG.3-2 not reported")) %>% drop_na(issue)
 
-rm(check_5, check_5_a)
+rm(check_6, check_6_a)
 
 ```
+```{r check 7 :EG.3-2_OULevel should be equal to or less than EG.3-2 summed across IMs}
 
-```{r check 6: EG.3.2-2 flag if “continuing” disaggregate for FY[reporting year] is greater than “new” FY[last reporting year] count}
+# Select the columns we need
+check_7 <- data3 %>% 
+          select('Activity Code', 'Disaggregate Code', 'Disaggregate Country',
+                 'Indicator Code', 'Fiscal Year', 'Collection Period Name',
+                 Actual_value) %>% filter(`Collection Period Name` == "FY2023-Annual",
+                                          `Indicator Code` == `Disaggregate Code`)
+#take 2023 indicator totals only
+
+#Create two data frames: each will have 1 obs: the first will select all EG.3-2 values in the OU
+#and sum them into a single value
+#the other will contain only the EG.3-2OULevel total value
+#to join them for this check we will create a column called "join" that allows us to join them
+
+# Create a dataframe for EG.3-2 for all activities (IMs) and sum them
+check7_im <- check_7 %>%
+               filter(`Indicator Code` == "EG.3-2") %>%
+               summarise(sum_IM = sum(Actual_value, na.rm = TRUE)) %>%
+               mutate(join = "join") #create a column to enable a join 
+
+# Create another dataframe for EG.3-2_OULevel 
+check7_ou <- check_7 %>%
+  filter(`Indicator Code` == "EG.3-2_OULevel") %>%
+  rename('OU_sum' = Actual_value) %>% 
+  mutate(join = "join") #create a column to enable a join
+
+# Compare EG.3-2 IM to EG.3-2 OU
+check_7_a <- check7_ou %>% left_join(check7_im) %>%
+              mutate(issue = case_when(sum_IM < OU_sum ~
+             "The HLI OU sum is greater than the sum of EG.3-2 across IMs, double check value")) %>% drop_na(issue) #only select where check fails
+
+rm(check_7, check7_im, check7_ou)
+```
+
+```{r check 8: New! flag any activity that didn't report EG.3-2 }
+#filter for eg.3-2 reported select distinct() so you have list of activities that reported eg.3-2
+#select distinct all activities
+#anti join
+#flag any that appear in anti join
+
+check_8_all_activities <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>% distinct(`Activity Name`, `Activity Code`)  #filter for all activities that appear at all with FY23 rows
+
+check_8_eg_reported <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual", `Indicator Code` == "EG.3-2") %>% distinct(`Activity Name`, `Activity Code`, `Indicator Code`) #filter for activities reporting on EG.3-2, create 1 row for each
+
+#create a df of those that appear in all activities but not in eg reported
+check_8 <- check_8_all_activities %>% anti_join(check_8_eg_reported)
+
+check_8_a <- check_8[!grepl("_HLI", check_8$`Activity Name`),] %>% #drop anywhere that activity name is _HLI since these are HLi activities that only report EG.3-2OULevel
+              mutate(issue = "Activity did not report on EG.3-2")
+
+rm(check_8_all_activities, check_8_eg_reported, check_8)          
+```
+
+```{r check 9: EG.3.2-2 flag if “continuing” disaggregate for FY[reporting year] is greater than “new” FY[last reporting year] count}
 
 #first select the indicators and disaggregates we are interested in:
 #this years (fy23) EG.3.2-2 continuing disaggregate 
 #last years (fy22) EG.3.2-2 new disaggregate
 
-check_6 <- data3 %>% filter(`Indicator Code` == "EG.3.2-2",
+check_9 <- data3 %>% filter(`Indicator Code` == "EG.3.2-2",
                             `Disaggregate Code` == "3.2.2" | `Disaggregate Code` == "3.2.1",
                             `Collection Period Name` == "FY2022-Annual" | `Collection Period Name` == "FY2023-Annual") %>% select(-c(Target_value, `Disaggregate Code`, UDN, Deviation, `Collection Period Name`)) #drop columns we don't need for this!
 
 #now we want to make one row per activity, so we want 2022 new, 2023 new, 2022 continuing, and 2023 continuing to be columns
 
-check_6_a <- check_6 %>% group_by(`Activity Code`) %>% 
+check_9_a <- check_9 %>% group_by(`Activity Code`) %>% 
                         pivot_wider(names_from = 
                                    c(`Fiscal Year`, `Disaggregate Name`),
                                    values_from = Actual_value)
 
-check <- get_dupes(check_6_a, `Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Country`) #make sure there is only one row per activity
+check <- get_dupes(check_9_a, `Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Country`) #make sure there is only one row per activity
 
 #check for when this years continuing is greater than last years new
 #2023_continuing > 2022_new
-check_6_b <- check_6_a %>% mutate(issue = case_when(`2023_Continuing` > `2022_New` ~ "This year's continuing > last years new")) %>% drop_na(issue)
+check_9_b <- check_9_a %>% mutate(issue = case_when(`2023_Continuing` > `2022_New` ~ "This year's continuing > last years new")) %>% drop_na(issue)
 
-rm(check_6, check_6_a, check)
+rm(check_9, check_9_a, check)
 ```
 
 
-```{r check 7: Is volume of sales reported under EG.3.2-26 total sales equal to or greater than total production reported under EG.3-10,-11,-12 yields.}
+```{r check 10: Is volume of sales reported under EG.3.2-26 total sales equal to or greater than total production reported under EG.3-10,-11,-12 yields.}
 
 #Select the columns we need
-check_7 <- data3 %>%
+check_10 <- data3 %>%
           select('Activity Code', 'Activity Name', 'Indicator Code', 
                  'Disaggregate Country', 'Disaggregate Code', 
                  'Disaggregate Name', 'Fiscal Year', 'Collection Period Name', 
                  'Actual_value') %>% filter(`Collection Period Name` == "FY2023-Annual")
 
 # Create a dataframe that sums all production yields from all EG.3-10-11-12 values
-check7_yield <- check_7 %>%
+check10_yield <- check_10 %>%
                 filter(`Indicator Code` %in% c('EG.3-10-11-12_CROP', 'EG.3-10-11-12_DAIRY',
                                  'EG.3-10-11-12_LIVSTK', 'EG.3-10-11-12_EGGS',
                                  'EG.3-10-11-12_PONDAQ', 'EG.3-10-11-12_OTHER')) %>% 
@@ -288,7 +355,7 @@ check7_yield <- check_7 %>%
                 summarize(total_production = sum(sum)) 
 
 # Create data frame that sums all total volume of sales for EG.3-2-26
-check7_sales <- check_7 %>%
+check10_sales <- check_10 %>%
                 filter(`Indicator Code` %in% 'EG.3.2-26') %>% 
                 #group_by(pa_id, indicator, indicator_name, disaggregate, actual2022)
                 filter(`Disaggregate Name` %in% 'Volume of sales (in MT)') %>% 
@@ -300,7 +367,7 @@ check7_sales <- check_7 %>%
 #note we want a full join here to make sure
 #we are capturing all activities that reported on one or the other
 #not just those that reported on both
-check_7_a <- full_join(check7_yield, check7_sales, 
+check_10_a <- full_join(check10_yield, check10_sales, 
                        by = c('Activity Code', 'Activity Name')) %>% 
                        mutate(issue = case_when(total_sales  > total_production ~ 
                        "total volume of sales is greater than total yield production",
@@ -310,13 +377,45 @@ check_7_a <- full_join(check7_yield, check7_sales,
                        "reported volume of sales but not yield")) %>%
                        drop_na(issue)
 
-rm(check_7, check7_sales, check7_yield)
+rm(check_10, check10_sales, check10_yield)
+```
+```{r check 11: Also flag for number of individuals applying (EG.3.2-24): can be lower than what is reported in yield but not higher}
+
+#select the columns we need
+check_11 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>% 
+  select(`Collection Period Name`, `Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Country`, `Disaggregate Commodity`, `Disaggregate Name`, Actual_value)
+
+# Create dataframe for just EG.3.10-11-12 select commodity values (units of production)
+check11_yield <- check_11 %>%
+  filter(`Indicator Code` %in% c('EG.3-10-11-12_CROP', 'EG.3-10-11-12_DAIRY', 'EG.3-10-11-12_EGGS', 'EG.3-10-11-12_PONDAQ', 'EG.3-10-11-12_LIVSTK', 'EG.3-10-11-12_OTHER')) %>%
+  filter(`Disaggregate Name` == "Units of Production by Sex") %>% #units of production disaggs should all equal but sex is required so we'll use that value 
+  group_by(`Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Commodity`) %>%
+  summarise(yield_sum = sum(Actual_value))
+#note we are summarizing here across firm sizes so they appear as dupes in this data but if you investigate disaggregate code in data3 you see they are actually units of production by sex for non-smallholder and smallholder farms
+#drop indicator code since now we have yield_sum to compare
+
+#Create dataframe for EG.3.2-25 commodity values (hectares)
+check11_24 <- check_11 %>% 
+  filter(`Indicator Code` == "EG.3.2-24") %>% drop_na(`Disaggregate Commodity`)  %>%
+  group_by(`Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Commodity`) %>%
+  summarise(farmer_sum = sum(Actual_value)) %>% ungroup() %>% select(-`Indicator Code`)
+  #since we are investigating commoditiy totals we want only those rows with commodity values
+
+
+#join our yield data to our hectare data, here we do a full join so even those commodities that don't appear in both dfs will appear in our final df
+check11_a <- full_join(check11_24, check11_yield, 
+                       by = c("Activity Code", "Activity Name", "Disaggregate Commodity")) %>% 
+             mutate(issue = case_when(is.na(yield_sum) & !is.na(farmer_sum) ~ "reported farmers under commodity but no yield", 
+                    `yield_sum` < `farmer_sum` ~ "sum of units of production under yield is lower than number of farmers",
+                    (is.na(farmer_sum)) & !is.na(yield_sum) ~ "reported production yield but no farmers under this commodity")) %>% drop_na(issue) #anywhere that both are missing or hectares is less than yield are dropped since they don't require follow up
+
+rm(check_11, check11_24, check11_yield)
 ```
 
-```{r check 8: Flag if yields (sum of all yield indicators by sex) are exactly the same for men and women, this is a red flag.}
+```{r check 12: Flag if yields (sum of all yield indicators by sex) are exactly the same for men and women, this is a red flag.}
 
 # Select the columns we need 
-check_8 <- data3 %>%
+check_12 <- data3 %>%
            select('Activity Code', 'Activity Name', 'Indicator Code', 
                   'Disaggregate Country','Disaggregate Name',
                   'Disaggregate Code', 'Collection Period Name', 'Fiscal Year',
@@ -326,7 +425,7 @@ check_8 <- data3 %>%
   
 # Create a dataframe for male yield total production only  
 # create one sum for each indicator for each activity
-check8_male <- check_8  %>%
+check12_male <- check_12  %>%
                filter(`Indicator Code` %in% c('EG.3-10-11-12_CROP', 'EG.3-10-11-12_DAIRY',
                                               'EG.3-10-11-12_LIVSTK', 'EG.3-10-11-12_EGGS',
                                               'EG.3-10-11-12_PONDAQ', 'EG.3-10-11-12_OTHER')) %>%
@@ -337,7 +436,7 @@ check8_male <- check_8  %>%
               summarize(total_m = sum(Actual_value, na.rm = TRUE))
 
 # Create dataframe for female yield total production only  
-check8_female <- check_8  %>%
+check12_female <- check_12  %>%
                filter(`Indicator Code` %in% c('EG.3-10-11-12_CROP', 'EG.3-10-11-12_DAIRY',
                                               'EG.3-10-11-12_LIVSTK', 'EG.3-10-11-12_EGGS',
                                               'EG.3-10-11-12_PONDAQ', 'EG.3-10-11-12_OTHER')) %>%
@@ -350,7 +449,7 @@ check8_female <- check_8  %>%
 
 # Combine the female and male dataframes to compare total yields. 
 # full join again here on the off chance an activity is missing male or female but not both
-check_8_a <- full_join(check8_female, check8_male, 
+check_12_a <- full_join(check12_female, check12_male, 
                        by = c('Activity Code', 'Activity Name', 'Indicator Code')) %>%
              mutate(issue = case_when(total_f == 0 & total_m == 0 ~ 
              #if both are blank flag 
@@ -360,46 +459,10 @@ check_8_a <- full_join(check8_female, check8_male,
              "Male and Female totals are equal. Double check this is correct.")) %>%
              drop_na(issue)
 
-rm(check_8, check8_female, check8_male)
+rm(check_12, check12_female, check12_male)
 ```
 
-
-```{r check 9 :EG.3-2_OULevel should be equal to or less than EG.3-2 summed across IMs}
-
-# Select the columns we need
-check_9 <- data3 %>% 
-          select('Activity Code', 'Disaggregate Code', 'Disaggregate Country',
-                 'Indicator Code', 'Fiscal Year', 'Collection Period Name',
-                 Actual_value) %>% filter(`Collection Period Name` == "FY2023-Annual",
-                                          `Indicator Code` == `Disaggregate Code`)
-#take 2023 indicator totals only
-
-#Create two data frames: each will have 1 obs: the first will select all EG.3-2 values in the OU
-#and sum them into a single value
-#the other will contain only the EG.3-2OULevel total value
-#to join them for this check we will create a column called "join" that allows us to join them
-
-# Create a dataframe for EG.3-2 for all activities (IMs) and sum them
-check9_im <- check_9 %>%
-               filter(`Indicator Code` == "EG.3-2") %>%
-               summarise(sum_IM = sum(Actual_value, na.rm = TRUE)) %>%
-               mutate(join = "join") #create a column to enable a join 
-
-# Create another dataframe for EG.3-2_OULevel 
-check9_ou <- check_9 %>%
-  filter(`Indicator Code` == "EG.3-2_OULevel") %>%
-  rename('OU_sum' = Actual_value) %>% 
-  mutate(join = "join") #create a column to enable a join
-
-# Compare EG.3-2 IM to EG.3-2 OU
-check_9_a <- check9_ou %>% left_join(check9_im) %>%
-              mutate(issue = case_when(sum_IM < OU_sum ~
-             "The HLI OU sum is greater than the sum of EG.3-2 across IMs, double check value")) %>% drop_na(issue) #only select where check fails
-
-rm(check_9, check9_im, check9_ou)
-```
-
-```{r check 11: If EG.3.2-27, EG.4.2-7 or EG.10.10-7 are present then YOUTH-3 and GNDR-2 should be present And vice versa,}
+```{r check 13: If EG.3.2-27, EG.4.2-7 or EG.10.10-7 are present then YOUTH-3 and GNDR-2 should be present And vice versa,}
 
 # Group by pa_id, select all indicators
 # If EG.3.2-27, EG.4.2-7 are present then YOUTH-3 and GNDR-2 should be present
@@ -408,17 +471,17 @@ rm(check_9, check9_im, check9_ou)
 #filter for the year we want, the indicators we want, cases where indicator = disaggregate code,
 #and where disaggregate code = youth-3 
 #to get this to work we do it in two parts
-check_11 <- data3 %>%
+check_13 <- data3 %>%
             select('Activity Code', 'Activity Name', 'Disaggregate Country',
                    'Indicator Code', 'Disaggregate Code', 'Disaggregate Country',
                    'Fiscal Year', 'Collection Period Name', Actual_value) %>%
             filter(`Collection Period Name` == "FY2023-Annual", 
                    `Indicator Code` %in% c('EG.3.2-27', 'EG.4.2-7', 'YOUTH-3', 'GNDR-2'))
 
-check_11_2 <- check_11 %>% filter(`Indicator Code` == `Disaggregate Code` |`Disaggregate Code` == "Youth-3") 
+check_13_2 <- check_11 %>% filter(`Indicator Code` == `Disaggregate Code` |`Disaggregate Code` == "Youth-3") 
 
 #pivot wider so we have one row per activity
-check11_wide <- check_11_2 %>%
+check13_wide <- check_13_2 %>%
   group_by(`Activity Code`, `Activity Name`) %>% 
   pivot_wider(id_cols = c('Activity Code', 'Activity Name', 'Fiscal Year', 'Disaggregate Country'),
               names_from = 'Indicator Code',
@@ -436,55 +499,15 @@ check11_wide <- check_11_2 %>%
 
 
 #Of the remaining  activities, how many activities reported on either EG.3.2-27 or EG.4.2-7 AND both Youth-3 and GNDR-2
-check12_output <- check12_incomplete %>%
+check13_output <- check13_incomplete %>%
   filter(flag == "missing complete set of indicators") %>% 
   select(pa_id, indicator, actual2022, flag) # Filter activities that are missing complete set of indicators
 
 ```
 
-```{r check 12: Flag if GNDR-2 and YOUTH-3 denominators are larger than the total for EG.3-2}
-#select columns we need and only the current year of data
-check_12 <- data3 %>% select('Activity Code', 'Activity Name', 
-                             'Indicator Code', 'Disaggregate Name', 'Disaggregate Country',
-                             'Fiscal Year', 'Collection Period Name', Actual_value) %>% 
-                      filter(`Collection Period Name` == "FY2023-Annual")
+```{r check 14: Flag if EG.10.4-8 actuals are larger than 10.4-7}
 
-# Create dataframe with just Youth-3 and GNDR-2 denominator totals 
-check_12_gy <- check_12 %>% 
-               select('Activity Code', 'Activity Name','Indicator Code', 
-                      'Disaggregate Name', Actual_value) %>%
-               #select only the indicators we want and filter down to 
-               #only their disaggregates
-              filter(`Indicator Code` %in% c('YOUTH-3', 'GNDR-2')) %>% 
-              filter(`Disaggregate Name` %in% c('Denominator: Total number of male and female participants in the program','Denominator: Number of total participants in the program'))
-
-%>%  #ML Left off here need to check data entry cells may need to do this at the sex disagg individual level
-  
-
-              pivot_wider(id_cols = c()
-              names_from = indicator,
-              values_from = actual2022)
-
-# Create dataframe with just EG.3-2 total
-check13_32 <- data8 %>%
-  filter(str_detect(indicator_name, "\\bEG.3-2:Number of individuals participating in USG food security programs")) %>% 
-  select(pa_id, actual2022) %>%
-  rename(`EG.3-2_sum` = actual2022)
-
-# Join and compare Youth/GNDR denom totals to EG3-2 total per activity
-check13_output <- full_join(check13_GY, check13_32, by = "pa_id") %>%
-  #select(-indicator_name) %>%
-  mutate(flag = case_when(`GNDR-2` > `EG.3-2_sum` ~ "Review: GNDR-2 and/or Youth-3 are greater than EG.3-2.",
-                          `Youth-3` > `EG.3-2_sum` ~ "Review: GNDR-2 and/or Youth-3 are greater than EG.3-2.",
-                          is.na(`EG.3-2_sum`) ~ "Review: EG.3-2 NOT reported")) %>% 
-  drop_na(flag) # This removes observations where EG3-2 and genderyouth are both NA AND it removes obs where genderyouth is NA but EG3-2 is inputted. OUs do not need to input data for genderyouth, but can still report on EG3-2 
-
-
-```
-
-```{r check 13: Flag if EG.10.4-8 actuals are larger than 10.4-7}
-
-check_13 <- data3 %>% select('Activity Code', 'Activity Name', 'Disaggregate Country',
+check_14 <- data3 %>% select('Activity Code', 'Activity Name', 'Disaggregate Country',
                              'Indicator Code', 'Disaggregate Code', 'Disaggregate Name',
                              'Disaggregate Country','Fiscal Year', 'Collection Period Name',
                              Actual_value) %>%
@@ -498,14 +521,14 @@ check_13 <- data3 %>% select('Activity Code', 'Activity Name', 'Disaggregate Cou
                             
 ```
 
-```{r check 14: Flag if total units of production (EG.3-10,11,12) is lower than the number of hectares applied (EG.3.2-25) for a respective commodity}
+```{r check 15: Flag if total units of production (EG.3-10,11,12) is lower than the number of hectares applied (EG.3.2-25) for a respective commodity}
 
 #select the columns we need
-check_14 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>% 
+check_15 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>% 
   select(`Collection Period Name`, `Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Country`, `Disaggregate Commodity`, `Disaggregate Name`, Actual_value)
 
 # Create dataframe for just EG.3.10-11-12 select commodity values (units of production)
-check14_yield <- check_14 %>%
+check15_yield <- check_15 %>%
   filter(`Indicator Code` %in% c('EG.3-10-11-12_CROP', 'EG.3-10-11-12_DAIRY', 'EG.3-10-11-12_EGGS', 'EG.3-10-11-12_PONDAQ', 'EG.3-10-11-12_LIVSTK', 'EG.3-10-11-12_OTHER')) %>%
   filter(`Disaggregate Name` == "Units of Production by Sex") %>% #units of production disaggs should all equal but sex is required so we'll use that value 
   group_by(`Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Commodity`) %>%
@@ -514,7 +537,7 @@ check14_yield <- check_14 %>%
 #drop indicator code since now we have yield_sum to compare
 
 #Create dataframe for EG.3.2-25 commodity values (hectares)
-check14_25 <- check_14 %>% 
+check15_25 <- check_15 %>% 
   filter(`Indicator Code` == "EG.3.2-25") %>% drop_na(`Disaggregate Commodity`)  %>%
   group_by(`Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Commodity`) %>%
   summarise(hectare_sum = sum(Actual_value)) %>% ungroup() %>% select(-`Indicator Code`)
@@ -522,71 +545,34 @@ check14_25 <- check_14 %>%
 
 
 #join our yield data to our hectare data, here we do a full join so even those commodities that don't appear in both dfs will appear in our final df
-check14_a <- full_join(check14_25, check14_yield, 
-                       by = c("Activity Code", "Activity Name", "Disaggregate Commodity")) %>% 
+check15_a <- full_join(check15_25, check15_yield, 
+                      by = c("Activity Code", "Activity Name", "Disaggregate Commodity")) %>% 
              mutate(issue = case_when(is.na(yield_sum) & !is.na(hectare_sum) ~ "reported hectares under commodity but no yield", 
                     `yield_sum` < `hectare_sum` ~ "sum of units of production under yield is lower than number of hectares applied",
                     (is.na(hectare_sum)) & !is.na(yield_sum) ~ "reported production yield but no hectares under this commodity")) %>% drop_na(issue) #anywhere that both are missing or hectares is less than yield are dropped since they don't require follow up
 
-rm(check14_25, check_14, check14_yield)
+rm(check15_25, check_15, check15_yield)
 ```
 
-```{r check 15: New! flag any activity that reported sex entirely DNA} }
-#select relevant info
-check_15 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%             
-                      select(`Activity Name`, `Activity Code`, `Indicator Code`, 
-                             `Disaggregate Country`, `Disaggregate Name`, Actual_value) %>%
-                      
-                      
-                      
+```{r check 16: New! If HL.8.3-3 #institutions can't exceed number of new insitutions}
 
-#select only sex disagg reporting
-
-
-#select only instances where all are NA except DNA
-
-
-```
-
-
-```{r check 16: New! flag any activity that didn't report EG.3-2 }
-#filter for eg.3-2 reported select distinct() so you have list of activities that reported eg.3-2
-#select distinct all activities
-#anti join
-#flag any that appear in anti join
-
-check_16_all_activities <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>% distinct(`Activity Name`, `Activity Code`)  #filter for all activities that appear at all with FY23 rows
-
-check_16_eg_reported <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual", `Indicator Code` == "EG.3-2") %>% distinct(`Activity Name`, `Activity Code`, `Indicator Code`) #filter for activities reporting on EG.3-2, create 1 row for each
-
-#create a df of those that appear in all activities but not in eg reported
-check_16 <- check_16_all_activities %>% anti_join(check_16_eg_reported)
-
-check_16_a <- check_16[!grepl("_HLI", check_16$`Activity Name`),] %>% #drop anywhere that activity name is _HLI since these are HLi activities that only report EG.3-2OULevel
-              mutate(issue = "Activity did not report on EG.3-2")
-
-rm(check_16_all_activities, check_16_eg_reported, check_16)          
-```
-
-```{r check 17: New! If HL.8.3-3 #institutions can't exceed number of new insitutions}
-
-check_17 <- data3 %>% filter(`Indicator Code` == "HL.8.3-3") %>% filter(`Collection Period Name` == "FY2023-Annual") %>% 
+check_16 <- data3 %>% filter(`Indicator Code` == "HL.8.3-3") %>% filter(`Collection Period Name` == "FY2023-Annual") %>% 
             select(-c(`Disaggregate Commodity`, `Disaggregate Country`, `UDN`, Target_value, `Deviation Narrative`, `Deviation`, `Collection Period Comments`, `Fiscal Year`)) #filter for indicator we need, drop columns we don't
 
 #filter for indicator total and mutate disagg_type column as indicator total
-check_17_a <- check_17 %>% mutate(type = case_when(`Indicator Code` == `Disaggregate Code` ~ "indicator total",
+check_16_a <- check_16 %>% mutate(type = case_when(`Indicator Code` == `Disaggregate Code` ~ "indicator total",
                                   `Indicator Code` != `Disaggregate Code` ~ "disaggregate"))
 
-check_17_total <- check_17_a %>% filter(type == "indicator total")
+check_16_total <- check_16_a %>% filter(type == "indicator total")
 
 #filter for new disagg and mutate disagg_type == new
-check_17_new <- check_17_a %>% filter(type == "disaggregate") %>% filter(`Disaggregate Name` == 
+check_16_new <- check_16_a %>% filter(type == "disaggregate") %>% filter(`Disaggregate Name` == 
                                                                            "# of Institutions First Strengthened This Year")
 
 #pivot wider 
 #compare disaggregate (new institutions) to total (total institutions)
 #flag when disagg > total, drop others
-check_17_b <- rbind(check_17_total, check_17_new) %>% #bind
+check_16_b <- rbind(check_16_total, check_16_new) %>% #bind
               group_by(`Activity Name`, `Activity Code`) %>%  
               pivot_wider(id_cols = c(`Activity Name`, 
                                       `Activity Code`, `Indicator Code`), 
@@ -594,18 +580,18 @@ check_17_b <- rbind(check_17_total, check_17_new) %>% #bind
                                       values_from = Actual_value) %>% 
               mutate(issue = case_when(disaggregate > `indicator total` ~ "Number of new institutions exceeds total number of institutions")) %>% drop_na(issue)
 
-rm(check_17, check_17_a, check_17_new, check_17_total)
+rm(check_16, check_16_a, check_16_new, check_16_total)
 ```
 
-```{r check 18: New! Is HL.8.4-3 a reasonable dollar amount?}
+```{r check 17: New! Is HL.8.4-3 a reasonable dollar amount?}
 #filter for 8.4-3 indicator total (when indicator = disagg code)
 #if the number is super low, something less than 15 dollars for a whole activity, flag
-check_18 <- data3 %>% filter(`Indicator Code` == "HL.8.4-3", `Collection Period Name` == "FY2023-Annual") %>% filter(`Indicator Code` == `Disaggregate Code`) %>% mutate(issue = case_when(Actual_value < 15 ~ "Super low value for dollar amount, may need review")) %>% drop_na(issue)
+check_17 <- data3 %>% filter(`Indicator Code` == "HL.8.4-3", `Collection Period Name` == "FY2023-Annual") %>% filter(`Indicator Code` == `Disaggregate Code`) %>% mutate(issue = case_when(Actual_value < 15 ~ "Super low value for dollar amount, may need review")) %>% drop_na(issue)
 
 ```
 
 
-```{r check 19: New! Did an activity report Climate adapation disagg for 3.2-24 or 3.2-25? Consider reporting on 11-6 in the PPR}
+```{r check 18: New! Did an activity report Climate adapation disagg for 3.2-24 or 3.2-25? Consider reporting on 11-6 in the PPR}
 
 #select the indicators we need, filter for only this year
 #select only the disaggs we are interested in 
@@ -614,7 +600,7 @@ check_18 <- data3 %>% filter(`Indicator Code` == "HL.8.4-3", `Collection Period 
 #drop all those that didnt report this
 
 #select the activities that report on climate disaggs
-check_19_3s <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%
+check_18_3s <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%
                       select(`Activity Code`, `Activity Name`, `Indicator Code`,
                              `Disaggregate Name`, Actual_value) %>% 
                       filter(`Indicator Code` == "EG.3.2-24" | 
@@ -626,21 +612,21 @@ check_19_3s <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%
                       rename("EG.3.2-24 or -25" = "Indicator Code",
                              "-24-25 value" = "Actual_value") #rename for join and easier identification purposes
 
-check_19_11 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%
+check_18_11 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%
                          select(`Activity Code`, `Activity Name`, `Indicator Code`,
                                 `Disaggregate Code`, Actual_value) %>%
                         filter(`Indicator Code` == "EG.11-6") %>%
                         rename("EG.11-6" = "Indicator Code",
                                "EG.11-6 value reported" = "Actual_value") #rename to make this easier in the join/case_When statement
 
-check19_a <- full_join(check_19_3s, check_19_11, by = c("Activity Code", "Activity Name")) %>%
+check18_a <- full_join(check_18_3s, check_18_11, by = c("Activity Code", "Activity Name")) %>%
                        mutate(issue = case_when(!is.na(`-24-25 value`) & is.na(`EG.11-6 value reported`) ~ "Reported climate disaggregated data but did not report on EG.11-6",
                      !is.na(`EG.11-6 value reported`) & is.na(`-24-25 value`) ~ "Reported EG.11-6 but not under climate disaggregates for 3.2-24 or 3.2-25")) %>% drop_na(issue)
 
-rm(check_19, check_19_11, check_19_3s)
+rm(check_18, check_18_11, check_18_3s)
 ```
 
-```{r check 20: New- Ukr supp! If an activity reported on Urk supp indicators quarterly & annually, is the annual value jsut the sum of the quarters? flag if so}
+```{r check 19: New- Ukr supp! If an activity reported on Urk supp indicators quarterly & annually, is the annual value jsut the sum of the quarters? flag if so}
 
 #group by activity and indicator and sum 
 #then filter down to those indicators annual
@@ -648,7 +634,7 @@ rm(check_19, check_19_11, check_19_3s)
 
 #filter for indicator totals (code = disagg code), for ukr supp indicators only,
 #for this year only
-check_20 <- data3 %>% filter(`Indicator Code` == `Disaggregate Code`, 
+check_19 <- data3 %>% filter(`Indicator Code` == `Disaggregate Code`, 
                              `Indicator Code` == "EG.3-2" | `Indicator Code` == "ES.5-a" |
                              `Indicator Code` == "HL.9-1") %>%
                       filter(str_detect(`Collection Period Name`, "FY2023")) %>% 
@@ -656,18 +642,18 @@ check_20 <- data3 %>% filter(`Indicator Code` == `Disaggregate Code`,
                              `Disaggregate Code`, `Collection Period Name`, Actual_value)
 
 #create an annual df
-check20_annual <- check_20 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%
+check19_annual <- check_19 %>% filter(`Collection Period Name` == "FY2023-Annual") %>%
                                rename("Indicator Code Annual" = "Indicator Code")
 
 #create an all reporting but annual df
-check20_qrt <- check_20 %>% filter(`Collection Period Name` != "FY2023-Annual") %>% 
+check19_qrt <- check_19 %>% filter(`Collection Period Name` != "FY2023-Annual") %>% 
                             group_by(`Activity Code`, `Activity Name`, `Indicator Code`) %>%
                             summarise(indicator_sum = sum(Actual_value)) %>%
   #get a single sum for each indicator across all collection periods 
               rename("Indicator Code Quarterly" = "Indicator Code")
 
 
-check20_a <- full_join(check20_qrt, check20_annual, by = c("Activity Code", "Activity Name", 
+check19_a <- full_join(check19_qrt, check19_annual, by = c("Activity Code", "Activity Name", 
                                    "Indicator Code Quarterly" = "Indicator Code Annual")) %>%
              mutate(issue = case_when(
               indicator_sum == Actual_value ~ "sum of all reported quarters is exactly equal to annual reported value", 
@@ -675,7 +661,44 @@ check20_a <- full_join(check20_qrt, check20_annual, by = c("Activity Code", "Act
               Actual_value > indicator_sum ~ "Annually reported value is greater than the sum of all quarterly reporting")) %>% drop_na(issue)
           
 
-rm(check_20, check20_annual, check20_qrt)
+rm(check_19, check19_annual, check19_qrt)
+```
+
+```{r check 20: Flag if GNDR-2 and YOUTH-3 denominators are larger than the total for EG.3-2}
+#select columns we need and only the current year of data
+check_20 <- data3 %>% select('Activity Code', 'Activity Name', 
+                             'Indicator Code', 'Disaggregate Name', 'Disaggregate Code',
+                             'Disaggregate Country',
+                             'Fiscal Year', 'Collection Period Name', Actual_value) %>% 
+                      filter(`Collection Period Name` == "FY2023-Annual")
+
+# Create dataframe with just Youth-3 and GNDR-2 denominator totals 
+check_20_gy <- check_20 %>% 
+               select('Activity Code', 'Activity Name','Indicator Code', 
+                      'Disaggregate Name', Actual_value) %>%
+               #select only the indicators we want and filter down to 
+               #only their disaggregates
+              filter(`Indicator Code` %in% c('YOUTH-3', 'GNDR-2')) %>% 
+              filter(`Disaggregate Name` %in% c('Denominator: Total number of male and female participants in the program','Denominator: Number of total participants in the program')) %>%
+              rename("Indicator Code - GY" = "Indicator Code",
+                     "Actual_value_gy" = "Actual_value") #rename for clarity in join
+
+
+# Create dataframe with ja_idust EG.3-2 total for this year
+check20_32 <- check_20 %>%
+  filter(`Collection Period Name` == "FY2023-Annual" & `Indicator Code` == `Disaggregate Code` & `Indicator Code` == "EG.3-2") %>%
+        rename("Indicator Code EG.3-2" = "Indicator Code",
+               "Actual_value EG.3-2" = "Actual_value") %>% #rename for clarity
+      select(-`Disaggregate Name`)
+
+# Join and compare Youth/GNDR denom totals to EG3-2 total per activity
+check20_a <- full_join(check_20_gy, check20_32, by = c("Activity Code", "Activity Name")) %>%
+  #select(-indicator_name) %>%
+  mutate(flag = case_when(`Actual_value_gy` > `Actual_value EG.3-2` ~ "Review: GNDR-2 and/or Youth-3 are greater than EG.3-2.",
+                          is.na(`Actual_value EG.3-2`) ~ "Review: EG.3-2 NOT reported")) %>% 
+  drop_na(flag) # This removes observations where EG3-2 and genderyouth are both NA AND it removes obs where genderyouth is NA but EG3-2 is inputted. OUs do not need to input data for genderyouth, but can still report on EG3-2 
+
+
 ```
 
 ```{r check 21: New! Flag if numerator of GNDR-2 and/or Youth-3 is not the disaggregate from EG.4.2-7, EG.3.2-27, EG.10.4-7}
@@ -695,8 +718,8 @@ check_21 <- data3 %>% select(`Activity Code`, `Activity Name`, `Collection Perio
 
 ```
 
-```{r check 24: New! Check if there is any reporting in FY24 or FY25 actuals.}
-check_25 <- data3 %>% select(`Collection Period Name`, `Activity Code`, `Disaggregate Code`,
+```{r check 23: New! Check if there is any reporting in FY24 or FY25 actuals.}
+check_23 <- data3 %>% select(`Collection Period Name`, `Activity Code`, `Disaggregate Code`,
                              `Activity Name`, `Indicator Code`, `Disaggregate Name`,
                               Actual_value) %>%
                      filter(`Indicator Code` == `Disaggregate Code`) %>%
@@ -708,43 +731,15 @@ check_25 <- data3 %>% select(`Collection Period Name`, `Activity Code`, `Disaggr
 
 ```
 
-```{r check 26: Also flag for number of individuals applying (EG.3.2-24): can be lower than what is reported in yield but not higher}
-
-#select the columns we need
-check_26 <- data3 %>% filter(`Collection Period Name` == "FY2023-Annual") %>% 
-  select(`Collection Period Name`, `Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Country`, `Disaggregate Commodity`, `Disaggregate Name`, Actual_value)
-
-# Create dataframe for just EG.3.10-11-12 select commodity values (units of production)
-check26_yield <- check_26 %>%
-  filter(`Indicator Code` %in% c('EG.3-10-11-12_CROP', 'EG.3-10-11-12_DAIRY', 'EG.3-10-11-12_EGGS', 'EG.3-10-11-12_PONDAQ', 'EG.3-10-11-12_LIVSTK', 'EG.3-10-11-12_OTHER')) %>%
-  filter(`Disaggregate Name` == "Units of Production by Sex") %>% #units of production disaggs should all equal but sex is required so we'll use that value 
-  group_by(`Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Commodity`) %>%
-  summarise(yield_sum = sum(Actual_value))
-#note we are summarizing here across firm sizes so they appear as dupes in this data but if you investigate disaggregate code in data3 you see they are actually units of production by sex for non-smallholder and smallholder farms
-#drop indicator code since now we have yield_sum to compare
-
-#Create dataframe for EG.3.2-25 commodity values (hectares)
-check26_24 <- check_26 %>% 
-  filter(`Indicator Code` == "EG.3.2-24") %>% drop_na(`Disaggregate Commodity`)  %>%
-  group_by(`Activity Name`, `Activity Code`, `Indicator Code`, `Disaggregate Commodity`) %>%
-  summarise(farmer_sum = sum(Actual_value)) %>% ungroup() %>% select(-`Indicator Code`)
-  #since we are investigating commoditiy totals we want only those rows with commodity values
-
-
-#join our yield data to our hectare data, here we do a full join so even those commodities that don't appear in both dfs will appear in our final df
-check26_a <- full_join(check26_24, check26_yield, 
-                       by = c("Activity Code", "Activity Name", "Disaggregate Commodity")) %>% 
-             mutate(issue = case_when(is.na(yield_sum) & !is.na(farmer_sum) ~ "reported farmers under commodity but no yield", 
-                    `yield_sum` < `farmer_sum` ~ "sum of units of production under yield is lower than number of farmers",
-                    (is.na(farmer_sum)) & !is.na(yield_sum) ~ "reported production yield but no farmers under this commodity")) %>% drop_na(issue) #anywhere that both are missing or hectares is less than yield are dropped since they don't require follow up
-
-rm(check_26, check26_24, check26_yield)
-```
-
 
 ```{r create an export}
 
 #get all your final files
+
+
+
+
+
 #bind
 #separate by activity 
 #export to invidiual sheets of a  file (existing google drive or excel)
