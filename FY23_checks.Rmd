@@ -153,8 +153,8 @@ check_1_c <- check_1_b %>%
   filter(perc >= 15 | is.infinite(perc) | is.na(perc)) %>%
   mutate(issue = "Change between FY23 actual and FY22 actual is greater than 15%")
 
-#create output to go to final
-check_1_d <- check_1_c %>% group_by(`Activity Name`, `Activity Code`)
+#create output to go to final 
+check_1_d <- check_1_c %>% group_by(`Activity Name`, `Activity Code`) %>% select(-perc)
 
 rm(check_1_a, check_1_b, check_1_c, check_1)
 ```
@@ -235,7 +235,7 @@ check <- get_dupes(check_6, `Activity Code`, `Indicator Code`, `Fiscal Year`, `D
 
 rm(check)
 
-check_6_a <- check_5 %>% group_by(`Activity Code`, `Disaggregate Country`) %>%
+check_6_a <- check_6 %>% group_by(`Activity Code`, `Disaggregate Country`) %>%
                          pivot_wider(names_from = `Indicator Code`,
                                      values_from = Actual_value)
 
@@ -497,7 +497,7 @@ check_13_3 <- check_13_2 %>%
                                "reported EG.3.2-27 and EG.4.2-7 but GNDR-2 or 
                                Youth-3 may be missing")  %>% drop_na(issue)
 
-
+rm(check_13, check_13_2)
 ```
 
 ```{r check 14: Flag if EG.10.4-8 actuals are larger than 10.4-7}
@@ -680,7 +680,7 @@ check_20_gy <- check_20 %>%
 
 
 # Create dataframe with ja_idust EG.3-2 total for this year
-check20_32 <- check_20 %>%
+check_20_32 <- check_20 %>%
   filter(`Collection Period Name` == "FY2023-Annual" & `Indicator Code` == `Disaggregate Code` & `Indicator Code` == "EG.3-2") %>%
         rename("Indicator Code EG.3-2" = "Indicator Code",
                "Actual_value EG.3-2" = "Actual_value") %>% #rename for clarity
@@ -689,11 +689,12 @@ check20_32 <- check_20 %>%
 # Join and compare Youth/GNDR denom totals to EG3-2 total per activity
 check20_a <- full_join(check_20_gy, check20_32, by = c("Activity Code", "Activity Name")) %>%
   #select(-indicator_name) %>%
-  mutate(flag = case_when(`Actual_value_gy` > `Actual_value EG.3-2` ~ "Review: GNDR-2 and/or Youth-3 are greater than EG.3-2.",
+  mutate(issue = case_when(`Actual_value_gy` > `Actual_value EG.3-2` ~ "Review: GNDR-2 and/or Youth-3 are greater than EG.3-2.",
                           is.na(`Actual_value EG.3-2`) ~ "Review: EG.3-2 NOT reported")) %>% 
-  drop_na(flag) # This removes observations where EG3-2 and genderyouth are both NA AND it removes obs where genderyouth is NA but EG3-2 is inputted. OUs do not need to input data for genderyouth, but can still report on EG3-2 
+  drop_na(issue) %>%  # This removes observations where EG3-2 and genderyouth are both NA AND it removes obs where genderyouth is NA but EG3-2 is inputted. OUs do not need to input data for genderyouth, but can still report on EG3-2 
 
 
+rm(check_20, check_20_gy, check_20_32)
 ```
 
 ```{r check 21: New! Flag if numerator of GNDR-2 and/or Youth-3 is not the disaggregate from EG.4.2-7, EG.3.2-27, EG.10.4-7}
@@ -731,11 +732,15 @@ check_23 <- data3 %>% select(`Collection Period Name`, `Activity Code`, `Disaggr
 ```{r create an export}
 
 #get all your final files
-rbind(check_1_d, check_2_a, check_3_b, check_6_b, check_7_a, check_8_a, check_9_a, 
-      check_10, check_11_a, check_12_a, )
+export <- rbind(check_1_d, check_2_a, 
+                #check_3_b, 
+                check_6_b, check_7_a, check_8_a, check_9_b, 
+      check_10_a, check_11_a, check_12_a, #check_13_3, check_14,
+      check15_a, check_16_b, check_17_b, check18_a, check19_a, check20_a,
+      check_23)
 
 
-
+export2 <- export %>% group_by(`Activity Name`, `Activity Code`) %>% group_split(.keep = TRUE)
 
 #bind
 #separate by activity 
