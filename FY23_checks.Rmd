@@ -478,10 +478,10 @@ check_13 <- data3 %>%
             filter(`Collection Period Name` == "FY2023-Annual", 
                    `Indicator Code` %in% c('EG.3.2-27', 'EG.4.2-7', 'YOUTH-3', 'GNDR-2'))
 
-check_13_2 <- check_11 %>% filter(`Indicator Code` == `Disaggregate Code` |`Disaggregate Code` == "Youth-3") 
+check_13_2 <- check_13 %>% filter(`Indicator Code` == `Disaggregate Code` |`Disaggregate Code` == "Youth-3") 
 
 #pivot wider so we have one row per activity
-check13_wide <- check_13_2 %>%
+check_13_3 <- check_13_2 %>%
   group_by(`Activity Code`, `Activity Name`) %>% 
   pivot_wider(id_cols = c('Activity Code', 'Activity Name', 'Fiscal Year', 'Disaggregate Country'),
               names_from = 'Indicator Code',
@@ -495,13 +495,8 @@ check13_wide <- check_13_2 %>%
                                (!is.na("EG.4.2-7") & !is.na("EG.3.2-27") & 
                                           is.na("GNDR-2") | is.na("YOUTH-3")) ~ 
                                "reported EG.3.2-27 and EG.4.2-7 but GNDR-2 or 
-                               Youth-3 may be missing") 
+                               Youth-3 may be missing")  %>% drop_na(issue)
 
-
-#Of the remaining  activities, how many activities reported on either EG.3.2-27 or EG.4.2-7 AND both Youth-3 and GNDR-2
-check13_output <- check13_incomplete %>%
-  filter(flag == "missing complete set of indicators") %>% 
-  select(pa_id, indicator, actual2022, flag) # Filter activities that are missing complete set of indicators
 
 ```
 
@@ -716,6 +711,7 @@ check_21 <- data3 %>% select(`Activity Code`, `Activity Name`, `Collection Perio
 
 ```{r check 22: New! If reporting on EG.4.2-7 & EG.3.2-27, flag if the denominator of GNDR-2 and/or Youth-3 are not equal to the largest number of participants}
 
+
 ```
 
 ```{r check 23: New! Check if there is any reporting in FY24 or FY25 actuals.}
@@ -735,7 +731,8 @@ check_23 <- data3 %>% select(`Collection Period Name`, `Activity Code`, `Disaggr
 ```{r create an export}
 
 #get all your final files
-
+rbind(check_1_d, check_2_a, check_3_b, check_6_b, check_7_a, check_8_a, check_9_a, 
+      check_10, check_11_a, check_12_a, )
 
 
 
