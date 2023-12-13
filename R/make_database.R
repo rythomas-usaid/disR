@@ -1,15 +1,13 @@
-#' Make FtF indicator database
+#' make ftf indicator database
 #'
-#' Create a single database from all the final indicator spreadsheets.
-#' @param input_dir The directory with all of the indicator files in the same format (xlsx by default).
-#' @param output_dir The directory where you want to store the output files.
-#' @param db The database format ("magnus" by default, or "extract")
-#' @param input_pattern The file format for all input files.
-#' @return Saves database in .Rdata format in the specified directory.
+#' create a single database from all the final indicator spreadsheets.
+#' @param input_dir the directory with all of the indicator files in the same format (xlsx by default).
+#' @param output_dir the directory where you want to store the output files.
+#' @param db the database format ("magnus" by default, or "extract")
+#' @param input_pattern the file format for all input files.
+#' @return saves database in .rdata format in the specified directory.
 #' @examples
-#' make_database(input_dir = "../../indicators/basic/"
-#'               , output_dir = "../data/"
-#'               , db = "basic")
+#' make_database()
 #' make_database(input_dir = "../../indicators/"
 #'               , output_dir = "../downloads/"
 #'               , db = "extract")
@@ -21,242 +19,335 @@ make_database <- function(input_dir = "../../indicators/basic/"
                           , output_dir = "../data/"
                           , db = "basic") {
 
+  source("R/standard_disaggregates.R")
+
     return_id <- function(row) {
     l <- round(log10(nrow(row))+1,0)
     id <- str_pad(rownames(row), width = l, pad = "0", side = "left")
     return(id)
     }
 
-    ## Join udn formulas #################
+    ## join udn formulas #################
     list_udns <- function(x) {
-      stringr::str_replace_all(x, "[()/+*]|100|Manual|NA", " ") %>%
+      stringr::str_replace_all(x, "[()/+*]|100|manual|na", " ") %>%
         stringr::str_extract_all(stringr::boundary("word"))
     }
 
-# Basic db ################
+    # reclassify disaggregates
+    reclassify_disag1 <- function(uic, d1, d2 , d3, d4) {
+      dplyr::case_when(
+        # headcount
+        uic %in% c("eg.3-2", "eg.3-2_oulevel") ~ d1
+        # producers
+        , uic == "eg.3.2-24/eg.3.2-x17"  ~ d2
+        # hectares
+        , uic == "eg.3.2-25/eg.3.2-x18" ~ d2
+        # sales
+        , uic == "eg.3.2-26/eg.3.2-x19" ~ d3
+        # financing
+        , uic == "eg.3.2-27/eg.3.2-x6" ~ d3
+      )
+    }
 
+    headcount_types <- c("producer", "organization participant", "household")
+    reclassify_disag2 <- function(uic, d1, d2, d3, d4, typeof) {
+      dplyr::case_when(
+        # headcount
+        uic %in% c("eg.3-2", "eg.3-2_oulevel") &
+          typeof %in% headcount_types ~ str_replace_all(
+            string=d2
+            , pattern = c("household " = ""
+                          , "people in " = ""
+                          , "producer: " = ""
+                          , "type of individual " = ""))
+        , uic %in% c("eg.3-2", "eg.3-2_oulevel") & d1 == "sex" ~ d2
+        # producers
+        , uic == "eg.3.2-24/eg.3.2-x17"  ~ d3
+        # hectares
+        , uic == "eg.3.2-25/eg.3.2-x18"  ~ d3
+        # sales
+        , uic == "eg.3.2-26/eg.3.2-x19" ~ sub(" -.*", "", d4)
+        # financing
+        , uic == "eg.3.2-27/eg.3.2-x6" ~ d4
+      )
+    }
+
+    reclassify_disag3 <- function(uic, d1, d2, d3, d4) {
+      dplyr::case_when(
+        # procuders
+        uic == "eg.3.2-24/eg.3.2-x17"  ~ d1
+        # hectares
+        , uic == "eg.3.2-25/eg.3.2-x18"  ~ d1
+        # sales
+        , uic == "eg.3.2-26/eg.3.2-x19" ~ d2
+        # financing
+        # financing
+        , uic == "eg.3.2-27/eg.3.2-x6" ~ sub(".*: ", "", d1)
+      )
+    }
+
+    reclassify_disag4 <- function(uic, d1, d2, d3, d4) {
+      dplyr::case_when(uic == "eg.3.2-26/eg.3.2-x19" ~ sub(".*: ", "", d1)
+                       , uic == "eg.3.2-27/eg.3.2-x6" ~ d3
+
+      )
+    }
+
+    # REOGRANIZATION
+    # reclassify disaggregates
+    reclassify_category <- function(uic, d1, d2 , d3, d4) {
+      dplyr::case_when(
+        # headcount
+        uic %in% c("eg.3-2", "eg.3-2_oulevel") ~ "actor"
+        # producers
+        , uic == "eg.3.2-24/eg.3.2-x17"  ~ "actor"
+        # hectares
+        , uic == "eg.3.2-25/eg.3.2-x18" ~ "land"
+        # sales
+        , uic == "eg.3.2-26/eg.3.2-x19" & ! stringr::str_detect(d4, "number") ~ "transaction"
+        , uic == "eg.3.2-26/eg.3.2-x19" & stringr::str_detect(d4, "number") ~ "actor"
+        # financing
+        , uic == "eg.3.2-27/eg.3.2-x6" ~ d3
+      )
+    }
+
+
+    household_types <- c("school-aged children", "household members",
+                         "parents/caregivers")
+    reclassify_type <- function(uic, d1, d2, d3, d4) {
+      dplyr::case_when(
+        # headcount
+        uic %in% c("eg.3-2", "eg.3-2_oulevel") & str_starts(d2, "producer: ") ~ "producer"
+        , uic %in% c("eg.3-2", "eg.3-2_oulevel") & str_detect(d2, "government|civil society") ~ "organization"
+        , uic %in% c("eg.3-2", "eg.3-2_oulevel") & str_detect(d2, "firm") ~ "firm"
+        , uic %in% c("eg.3-2", "eg.3-2_oulevel") &
+          d2 == "type of individual disaggregates not available" ~ "disaggregates not available"
+        , uic %in% c("eg.3-2", "eg.3-2_oulevel") &
+          d2 == "type of individual not applicable" ~ "not applicable"
+        , uic %in% c("eg.3-2", "eg.3-2_oulevel") & str_starts(d2, "laborers") ~ "laborers"
+        , uic %in% c("eg.3-2", "eg.3-2_oulevel") & d2 %in% household_types ~ "household"
+
+        # producers
+        , uic == "eg.3.2-24/eg.3.2-x17" & str_detect(d1, "producers") ~ "producer"
+        , uic == "eg.3.2-24/eg.3.2-x17" &
+          # Confirm
+          str_detect(d1, c("government|civil society|other|not available")) ~ "organization"
+        , uic == "eg.3.2-24/eg.3.2-x17" &
+          # Confirm
+          str_detect(d1, c("firm")) ~ "firm"
+
+        # sales
+        , uic == "eg.3.2-26/eg.3.2-x19" &
+          stringr::str_detect(d1, "type of product") &
+          stringr::str_detect(d4, "number") ~ "producer"
+        , uic == "eg.3.2-26/eg.3.2-x19" &
+          stringr::str_detect(d1, "type of service") &
+          stringr::str_detect(d4, "number") ~ "service provider"
+        , uic == "eg.3.2-26/eg.3.2-x19" &
+          stringr::str_detect(d1, "type of product") ~ "product"
+        , uic == "eg.3.2-26/eg.3.2-x19" &
+          stringr::str_detect(d1, "type of service") ~ "service"
+
+        # financing
+        , uic == "eg.3.2-27/eg.3.2-x6" &
+          stringr::str_detect(d3, "producer") ~ "producer"
+        , uic == "eg.3.2-27/eg.3.2-x6" &
+          stringr::str_detect(d3, "firm") ~  "firm"
+        uic == "eg.3.2-27/eg.3.2-x6" &
+          stringr::str_detect(d3, "size") ~  "size"
+        "size of recipient(s)"
+      )
+    }
+
+    reclassify_unit <- function(uic, d1, d2, d3, d4) {
+      dplyr::case_when(
+        # producers are all people
+        uic == "eg.3.2-24/eg.3.2-x17" ~ "people"
+
+        # hectares
+        , uic == "eg.3.2-25/eg.3.2-x18" ~ "area"
+
+        # sales
+        , uic == "eg.3.2-26/eg.3.2-x19" &
+          stringr::str_detect(d4, "value") ~ "dollars"
+        , uic == "eg.3.2-26/eg.3.2-x19" &
+          stringr::str_detect(d4, "number") ~ "people"
+        , uic == "eg.3.2-26/eg.3.2-x19" &
+          stringr::str_detect(d4, "volume") ~ "metric tons"
+
+        # financing
+        , uic == "eg.3.2-27/eg.3.2-x6" &
+          stringr::str_detect(d2, "value") ~ "dollars"
+      , uic == "eg.3.2-27/eg.3.2-x6" &
+        stringr::str_detect(d2, "number") ~  "people"
+      , uic == "eg.3.2-27/eg.3.2-x6" &
+        stringr::str_detect(d2, "volume") ~ "metric tons"
+      )
+    }
+
+    make_uid <- function(uic, unit, typeof) {
+      case_when(
+        is.na(unit) & is.na(typeof) ~ uic
+        , !is.na(unit) & is.na(typeof) ~ str_c(uic, "_", unit)
+        , is.na(unit) & !is.na(typeof) ~ str_c(uic, "_", typeof)
+        , !is.na(unit) & !is.na(typeof) ~ str_c(uic, "_", unit, "_", typeof)
+      )
+    }
+
+
+# basic db ################
   if(db == "basic") {
     indicator_files <- list.files(input_dir, pattern = "xlsx")
 
   indicators_df <- purrr::map(
     stringr::str_c(input_dir, indicator_files), ~ disR::read_indicator(.x)) %>%
     purrr::list_rbind() %>%
-    #relocate(c(d3, d4), .after=d2) %>%
+    mutate(across(-value, ~ str_to_lower(.))) %>%
+    relocate(c(d3, d4), .after=d2) %>%
     dplyr::filter(!is.na(value)) %>%
-    dplyr::mutate(year = paste0("FY", year)) %>%
-    #indicators_df <-   indicators_df %>%
+    dplyr::mutate(year = paste0("fy", year)) %>%
+
     dplyr::mutate(uic = dplyr::case_when(
-      ic %in% c("EG.3.2-25","EG.3.2-x18") ~ "EG.3.2-25/EG.3.2-x18"
-      , ic %in% c("EG.3.2-24", "EG.3.2-x17") ~ "EG.3.2-24/EG.3.2-x17"
-      , ic %in% c("EG.3.2-26", "EG.3.2-x19") ~ "EG.3.2-26/EG.3.2-x19"
-      , ic %in% c("EG.3.2-27","EG.3.2-x6") ~ "EG.3.2-27/EG.3.2-x6"
-      , ic %in% c("EG.3.1-14/-15","EG.3.2-x22") ~ "EG.3.1-14/-15/EG.3.2-x22"
+      ic %in% c("eg.3.2-24", "eg.3.2-x17") ~ "eg.3.2-24/eg.3.2-x17"
+      , ic %in% c("eg.3.2-25","eg.3.2-x18") ~ "eg.3.2-25/eg.3.2-x18"
+      , ic %in% c("eg.3.2-26", "eg.3.2-x19") ~ "eg.3.2-26/eg.3.2-x19"
+      , ic %in% c("eg.3.2-27","eg.3.2-x6") ~ "eg.3.2-27/eg.3.2-x6"
+      , ic %in% c("eg.3.1-14/-15","eg.3.2-x22") ~ "eg.3.1-14/-15/eg.3.2-x22"
       , .default = ic)
-      , .after = ic)  %>%
-    dplyr::mutate(disagg_group = paste(d1, d2, d3, d4, sep=" / ")) %>%
-    dplyr::mutate(uid = dplyr::case_when(
-      dplyr::if_any(tidyselect::everything()
-                    , ~ stringr::str_detect(., "Value of Sales")) ~
-        paste0(uic, "_value")
-      , dplyr::if_any(tidyselect::everything()
-                      , ~ stringr::str_detect(., "Number of Participants")) ~
-        paste0(uic, "_number")
-      , dplyr::if_any(tidyselect::everything()
-                      , ~ stringr::str_detect(., "Volume of Sales")) ~
-        paste0(uic, "_volume")
-      , .default = uic)) %>%
-    dplyr::mutate()
+      , .after = ic) %>%
+    dplyr::mutate(across(c(d1, d2, d3, d4),
+                         ~ str_replace_all(str_trim(.), disags_replace_all)))
 
-
-  # Create disaggregates lookup
+  # create disaggregates lookup
   indicators <- indicators_df %>%
     dplyr::distinct(ic, uic, d1, d2, d3, d4) %>%
-    dplyr::mutate(id = disR::return_id(.), .before = everything()) %>%
+    dplyr::mutate(id = disR::return_id(.), .before = everything())
+
+  # create target values lookup
+  values <- indicators_df %>%
+    # filter(type == "target") %>%
+    dplyr::left_join(indicators) %>%
+    dplyr::rename(id_ind = id)
+
+  indicators <- indicators %>%
     #encode combination categories
-    # https://docs.google.com/document/d/1qwfBlce3UUmMzKY7ABCMcb_Tx_Mb7d7IeKHUn-5zhlU/edit
+    # https://docs.google.com/document/d/1qwfblce3uummzky7abcmcb_tx_mb7d7iekhun-5zhlu/edit
     dplyr::mutate(group = dplyr::case_when(
-      ic %in% c("EG.3.2-25", "EG.3.2-x18") &
-            d1 %in% c("Crop Land", "Cultivated Pasture", "Cultivated Land") &
-            d2 =="Sex" ~ "Cultivated Land"
-      , ic %in% c("EG.3.2-25", "EG.3.2-x18") & d1 %in% c("Aquaculture") &
-            d2 =="Sex" ~  "Aquaculture"
-      , ic %in% c("EG.3.2-25", "EG.3.2-x18") & d1 %in% c("Other") &
-            d2 =="Sex" ~  "Other"
-      , ic %in% c("EG.3.2-25", "EG.3.2-x18") &
-            d1 %in% c("Conservation/Protected Area"
-                      , "Freshwater or Marine Ecosystems", "Rangeland") &
-            d2 =="Sex" ~ "Extensively managed"
+      ic %in% c("eg.3.2-25", "eg.3.2-x18") &
+            d1 %in% c("crop land", "cultivated pasture", "cultivated land") &
+            d2 =="sex" ~ "cultivated land"
+      , ic %in% c("eg.3.2-25", "eg.3.2-x18") & d1 %in% c("aquaculture") &
+            d2 =="sex" ~  "aquaculture"
+      , ic %in% c("eg.3.2-25", "eg.3.2-x18") & d1 %in% c("other") &
+            d2 =="sex" ~  "other"
+      , ic %in% c("eg.3.2-25", "eg.3.2-x18") &
+            d1 %in% c("conservation/protected area"
+                      , "freshwater or marine ecosystems", "rangeland") &
+            d2 =="sex" ~ "extensively managed"
       , .default = NA)
-      , .after = everything())
+      , .after = everything()) %>%
 
-###### Sex and age indicators ######
+    #filter(uic != "eg.3.2-27/eg.3.2-x6" & !str_detect(d1, "total")) %>%
 
-##### EG.3.2-24/x17 #####
+    mutate(unit = reclassify_unit(uic, d1, d2, d3, d4)
+           , typeof = reclassify_type(uic, d1, d2, d3, d4)
+           , uid = make_uid(uic, unit, typeof)
+           , disag1 = reclassify_disag1(uic, d1, d2, d3, d4)
+           , disag2 = reclassify_disag2(uic, d1, d2, d3, d4, typeof)
+           , disag3 = reclassify_disag3(uic, d1, d2, d3, d4)
+           , disag4 = reclassify_disag4(uic, d1, d2, d3, d4)) %>%
+    relocate(c(d1, d2, d3, d4), .after=everything())
+
+## sex and age indicators #####
+
+  ##### eg.3-2 #####
+  # headcount
+
+
+
+  ##### eg.3.2-24/x17 #####
   producers_indicators <- indicators %>%
-    dplyr::filter(uic == "EG.3.2-24/EG.3.2-x17" & d2 !=  "Commodity") %>%
-    dplyr::mutate(disag1 = d2
-                  , disag2 = d3
-                  , disag3 = d1) %>%
+    dplyr::filter(uic == "eg.3.2-24/eg.3.2-x17" & d2 !=  "commodity") %>%
     dplyr::select(-c(d1, d2, d3, d4))
 
 
-###### EG.3.2-25/x18 #####
+  ###### eg.3.2-25/x18 #####
   hectares_indicators <- indicators %>%
-    dplyr::filter(uic == "EG.3.2-25/EG.3.2-x18" & d2 != "Commodity") %>%
-    dplyr::mutate(disag1 = d2
-                  , disag2 = d3
-                  , disag3 = d1) %>%
+    dplyr::filter(uic == "eg.3.2-25/eg.3.2-x18" & d2 != "commodity") %>%
     dplyr::select(-c(d1, d2, d3, d4))
 
-  ###### EG.3.2-26/x19 #####
+  ###### eg.3.2-26/x19 #####
   sales_indicators <- indicators %>%
-    dplyr::filter(uic == "EG.3.2-26/EG.3.2-x19" & d1 != "Commodity") %>%
-
-    # Make UID
-    dplyr::mutate(uid = case_when(
-      stringr::str_detect(d1, "Type of Product") ~ paste0(uic, "_product")
-      , stringr::str_detect(d1, "Type of Service") ~ paste0(uic, "_service")
-      , .default = uic)
-      , .after = uic) %>%
-    dplyr::mutate(uid = case_when(
-      stringr::str_detect(d4, "Value") ~ paste0(uid, "_value")
-      , stringr::str_detect(d4, "Number") ~ paste0(uid, "_number")
-      , stringr::str_detect(d4, "Volume") ~ paste0(uid, "_volume"))
-      , .after = uic) %>%
-
-    # encode combination categories
-    # https://docs.google.com/document/d/1qwfBlce3UUmMzKY7ABCMcb_Tx_Mb7d7IeKHUn-5zhlU/edit
-    dplyr::mutate(disag1 = d3
-                  , disag2 = sub(" -.*", "", d4)
-                  , disag3 = d2
-                  , disag4 = sub(".*: ", "", d1)) %>%
+    dplyr::filter(uic == "eg.3.2-26/eg.3.2-x19" & d1 != "commodity") %>%
     dplyr::select(-c(d1, d2, d3, d4))
 
-  ###### EG.3.2-27/x6 ####
+  ###### eg.3.2-27/x6 ####
   financing_indicators <- indicators %>%
-    dplyr::filter(uic == "EG.3.2-27/EG.3.2-x6") %>%
-
-    # Make UID
-    dplyr::mutate(uid = case_when(
-      stringr::str_detect(d3, "Producer") ~ paste0(uic, "_producer")
-      , stringr::str_detect(d3, "Firm") ~ paste0(uic, "_firm")
-      , .default = uic)
-      , .after = uic) %>%
-    dplyr::mutate(uid = case_when(
-      stringr::str_detect(d2, "Value") ~ paste0(uid, "_value")
-      , stringr::str_detect(d2, "Number") ~ paste0(uid, "_number")
-      , stringr::str_detect(d2, "Volume") ~ paste0(uid, "_volume")
-      , .default = uic)
-      , .after = uic) %>%
-
-    # fix D3
-    dplyr::mutate(d3 = case_when(
-      stringr::str_detect(d3, "Sex") ~ "Sex"
-      , stringr::str_detect(d3, "Age") ~ "Age"
-      , stringr::str_detect(d3, "Size") ~ "Size")
-      , .after = d2) %>%
-    # distinct(d1, d2)
-
-    # Fix D1
-    dplyr::filter(d1 %in% c("Type of Financing Accessed: Cash Debt"
-                            ,"Type of Financing Accessed: In-Kind Debt"
-                            , "Type of Financing Accessed: Non-Debt" )) %>%
+    dplyr::filter(uic == "eg.3.2-27/eg.3.2-x6") %>%
+    # fix d1
+    dplyr::filter(d1 %in% c("type of financing accessed: cash debt"
+                            ,"type of financing accessed: in-kind debt"
+                            , "type of financing accessed: non-debt" )) %>%
     dplyr::mutate(d1 = sub(".*: ", "", d1)) %>%
     dplyr::mutate(disag1 = d3
                   , disag2 = d4
-                  , disag3 = sub("*.-", "", d1)) %>%
+                  , disag3 = sub("*.:", "", d1)) %>%
+
     dplyr::select(-c(d1, d2, d3, d4))
 
-  ##### Sex indicators #####
-  # Filter unique on the reorganized indicators
+  ##### sex indicators #####
+  # filter unique on the reorganized indicators
   sex_indicators <- hectares_indicators %>%
     dplyr::bind_rows(sales_indicators
                      , producers_indicators
                      , financing_indicators) %>%
-    dplyr::filter(disag1 == "Sex")
+    dplyr::filter(disag1 == "sex")
 
-  ##### Age indicators #####
+  ##### age indicators #####
   age_indicators <- hectares_indicators %>%
     dplyr::bind_rows(sales_indicators
                      , producers_indicators
                      , financing_indicators) %>%
-    dplyr::filter(disag1 == "Age")
+    dplyr::filter(disag1 == "age")
 
-  ##### Commodity indicators #####
+  ##### commodity indicators #####
   commodity_indicators <- indicators %>%
-    dplyr::filter(if_any(everything(), ~ stringr::str_detect(., "Commodity"))) %>%
-    #dplyr::filter(uic == "EG.3.2-24/EG.3.2-x17" & d2 !=  "Commodity") %>%
+    dplyr::filter(disag1 == "commodity")
 
-    # Reorder EG.3.2-24/EG.3.2-x17
-    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-24/EG.3.2-x17" ~ d2)
-                  , disag2 = case_when(uic == "EG.3.2-24/EG.3.2-x17" ~ d3)
-                  , disag3 = case_when(uic == "EG.3.2-24/EG.3.2-x17" ~ d1)) %>%
-    # Reorder EG.3.2-25/EG.3.2-x18
-    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-25/EG.3.2-x18" ~ d2)
-                  , disag2 = case_when(uic == "EG.3.2-25/EG.3.2-x18" ~ d3)
-                  , disag3 = case_when(uic == "EG.3.2-25/EG.3.2-x18" ~ d1)) %>%
-    # Reorder EG.3.2-26/EG.3.2-x19
-    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ d3)
-                  , disag2 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ sub(" -.*", "", d4))
-                  , disag3 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ d2)
-                  , disag4 = case_when(uic == "EG.3.2-26/EG.3.2-x19" ~ sub(".*: ", "", d1))) %>%
-    # Reorder EG.3.2-27/EG.3.2-x6
-    dplyr::mutate(disag1 = case_when(uic == "EG.3.2-27/EG.3.2-x6" ~ d3)
-                  , disag2 = case_when(uic == "EG.3.2-27/EG.3.2-x6" ~ d4)
-                  , disag3 = case_when(uic == "EG.3.2-27/EG.3.2-x6" ~ sub("*.-", "", d1)))
-
-    # Make UID
-    dplyr::mutate(uid = case_when(
-      stringr::str_detect(d3, "Producer") ~ paste0(uic, "_producer")
-      , stringr::str_detect(d3, "Firm") ~ paste0(uic, "_firm")
-      , .default = uic)
-      , .after = uic) %>%
-
-    # encode combination categories
-    # https://docs.google.com/document/d/1qwfBlce3UUmMzKY7ABCMcb_Tx_Mb7d7IeKHUn-5zhlU/edit
-    dplyr::mutate(disag1 = d3
-                  , disag2 = sub(" -.*", "", d4)
-                  , disag3 = d2
-                  , disag4 = sub(".*: ", "", d1))
-
-  non_agesex_indicators <-
+  mgmt_tech_type_indicators <-
     dplyr::bind_rows(sales_indicators
                      , producers_indicators
                      , financing_indicators) %>%
-    dplyr::filter(! disag1 %in% c("Sex", "Age"))
+    dplyr::filter(disag1 == "management practice or tech type")
 
 
-###### Other Tables #########
-  # Create implementing mechanisms lookup
+###### other tables #########
+  # create implementing mechanisms lookup
   ims <- indicators_df %>%
     dplyr::distinct(ro, ou, a_code, a_name) %>%
     dplyr::mutate(id = disR::return_id(.), .before = everything())
 
-
-  # Create target values lookup
-  values <- indicators_df %>%
-    # filter(type == "Target") %>%
-    dplyr::left_join(indicators) %>%
-    dplyr::rename(id_ind = id) %>%
+  values <- values %>%
     dplyr::left_join(ims) %>%
     dplyr::select(id_im = id, id_ind, type, year, value) %>%
     dplyr::relocate(c(id_im, id_ind), .before=tidyselect::everything()) %>%
     dplyr::mutate(id = disR::return_id(.), .before = tidyselect::everything())
 
+
   ftf_target_countries <- data.frame(
-    country = c("Bangladesh","Democratic Republic of the Congo"
-                , "Ethiopia","Ghana","Guatemala","Honduras","Kenya","Liberia"
-                , "Madagascar","Malawi", "Mali","Mozambique", "Nepal","Niger"
-                , "Nigeria","Rwanda", "Senegal","Tanzania", "Uganda","Zambia")
+    country = c("bangladesh","democratic republic of the congo"
+                , "ethiopia","ghana","guatemala","honduras","kenya","liberia"
+                , "madagascar","malawi", "mali","mozambique", "nepal","niger"
+                , "nigeria","rwanda", "senegal","tanzania", "uganda","zambia")
     , ftf_target = TRUE)
 
   save(indicators_df, indicators, values, ims, ftf_target_countries
 
        , hectares_indicators, sales_indicators, producers_indicators, financing_indicators
 
-       , sex_indicators, age_indicators, commodity_indicators, non_agesex_indicators
+       , sex_indicators, age_indicators, commodity_indicators
 
-       , file = paste0(output_dir, "/", db, ".Rdata"))
+       , file = paste0(output_dir, "/", db, ".rdata"))
 
   write.csv(indicators_df, paste0(output_dir, "/", "indicators_df.csv"))
   write.csv(indicators, paste0(output_dir, "/", "indicators.csv"))
@@ -265,191 +356,191 @@ make_database <- function(input_dir = "../../indicators/basic/"
 
 
 
-# Detailed db #########
+# detailed db #########
 
   } else if (db == "extract") {
 
     gs4_auth()
 
-    # load("../database/extract/indicators_db.Rdata")
-    # File name is: "DIS ENT - OU Activity Indicator Results (All Data)_20230622 Extract_Extract.csv"
-    input_file <- paste0(input_dir, "DIS ENT - OU Activity Indicator Results (All Data)_20230622 Extract_Extract.csv")
-    dat <- read.csv(input_file, colClasses=c("Activity.Code"="character"))
+    # load("../database/extract/indicators_db.rdata")
+    # file name is: "dis ent - ou activity indicator results (all data)_20230622 extract_extract.csv"
+    input_file <- paste0(input_dir, "dis ent - ou activity indicator results (all data)_20230622 extract_extract.csv")
+    dat <- read.csv(input_file, colclasses=c("activity.code"="character"))
     dat <- dat %>%
-      dplyr::rename(ro = Reporting.Organization
-             , ou = Operating.Unit
-             , a_code = Activity.Code
-             , a_name = Activity.Name
-             , ic=Indicator.Code
-             , ip = Activity.Vendor
-             , a_end = Activity.End.Date
-             , a_start = Activity.Start.Date
-             , i_end = Indicator.End.Date
-             , i_start = Indicator.Start.Date
-             , d_end = Disaggregate.End.Date
-             , d_start = Disaggregate.Start.Date
-             , a_office = Activity.Office
-             , status = Activity.Status
-             , tags = Activity.Tags
-             , id = ID.Managing.Office
-             , m_code = Managing.Office.Code
-             , m_office = Managing.Office.Name
-             #, country = Disaggregate.Country
-             , udn = UDN
-             , year = Fiscal.Year
-             , target = Target.Value
-             , actual = Actual.Value)  %>%
+      dplyr::rename(ro = reporting.organization
+             , ou = operating.unit
+             , a_code = activity.code
+             , a_name = activity.name
+             , ic=indicator.code
+             , ip = activity.vendor
+             , a_end = activity.end.date
+             , a_start = activity.start.date
+             , i_end = indicator.end.date
+             , i_start = indicator.start.date
+             , d_end = disaggregate.end.date
+             , d_start = disaggregate.start.date
+             , a_office = activity.office
+             , status = activity.status
+             , tags = activity.tags
+             , id = id.managing.office
+             , m_code = managing.office.code
+             , m_office = managing.office.name
+             #, country = disaggregate.country
+             , udn = udn
+             , year = fiscal.year
+             , target = target.value
+             , actual = actual.value)  %>%
       dplyr::select(-id) %>%
       dplyr::mutate(system = "dis") %>%
-      dplyr::mutate(Disaggregate.Country = case_when(
-        Disaggregate.Country == "MALI" ~ "Mali"
-        , .default = Disaggregate.Country)) %>%
+      dplyr::mutate(disaggregate.country = case_when(
+        disaggregate.country == "mali" ~ "mali"
+        , .default = disaggregate.country)) %>%
       dplyr::mutate(dplyr::across(c(actual, target), ~ as.numeric(.)))
 
     # read.ftfms <- function(x) {
     #   out <- read.xlsx(x) %>%
-    #     separate_wider_delim(IndicatorName, ":",
-    #                          names = c("IndicatorName", "Indicator.Code")) %>%
-    #     rename(Indicator.Name = IndicatorName
-    #          , Reporting.Organization = ReportingOrganization
-    #          , Managing.Office.Name = `Bureau/Region`
-    #          , Operating.Unit = OperatingUnit
-    #          , Activity.Code = `PA-ID`
+    #     separate_wider_delim(indicatorname, ":",
+    #                          names = c("indicatorname", "indicator.code")) %>%
+    #     rename(indicator.name = indicatorname
+    #          , reporting.organization = reportingorganization
+    #          , managing.office.name = `bureau/region`
+    #          , operating.unit = operatingunit
+    #          , activity.code = `pa-id`
     #
-    #          	, d1 = DisaggregationName1
-    #          	, d2 = DisaggregationName2
-    #          	, d3 = DisaggregationName3
-    #          	, d4 = DisaggregationName4
-    #          	, d5 = DisaggregationName5
+    #          	, d1 = disaggregationname1
+    #          	, d2 = disaggregationname2
+    #          	, d3 = disaggregationname3
+    #          	, d4 = disaggregationname4
+    #          	, d5 = disaggregationname5
     #
-    #          , Target.Value = TargetValue
-    #          , Actual.Value = ActualValue
-    #          , Deviation.Narrative = DeviationNarrative	) %>%
+    #          , target.value = targetvalue
+    #          , actual.value = actualvalue
+    #          , deviation.narrative = deviationnarrative	) %>%
     #     mutate(across(starts_with("d"), ~ as.character(.))) %>%
     #     mutate(system = "ftfms")
     #   return(out)
     # }
 
-    # files <- c("../indicators/FTFMS Full Dataset 2011-2019 1.xlsx",
-    #            "../indicators/FTFMS Full Dataset 2011-2019 2.xlsx")
+    # files <- c("../indicators/ftfms full dataset 2011-2019 1.xlsx",
+    #            "../indicators/ftfms full dataset 2011-2019 2.xlsx")
     #
     # ftfms <- map(files, read.ftfms) %>%
     #  list_rbind()
 
 
-    ##### Indicators #############
-    indicators <- dat %>% #select(-Disaggregate.Commodity) %>%
+    ##### indicators #############
+    indicators <- dat %>% #select(-disaggregate.commodity) %>%
       dplyr::distinct(ic, udn, d_end, d_start
-               , dplyr::across(tidyselect::starts_with("Disaggregate"))
-               , Indicator.Origin, Indicator.Tags, Is.FTF, Is.PPR, Is.PMP
-               , Is.Neither.PPR.PMP, Is.COVID, Indicator.Collection.Frequency
+               , dplyr::across(tidyselect::starts_with("disaggregate"))
+               , indicator.origin, indicator.tags, is.ftf, is.ppr, is.pmp
+               , is.neither.ppr.pmp, is.covid, indicator.collection.frequency
                , i_end) %>%
       dplyr::mutate(uudn = paste(ic, udn, sep="_")
              , id = disR::return_id(.)
              , .before = tidyselect::everything())
 
 
-    ##### Get UDN formulas from DIS (from Paul) ###########
-    url <- "https://docs.google.com/spreadsheets/d/14iw2PRItDeB-OY8deb5klnN9HwbnhiAWv7DiTS5EwVo/edit#gid=1094963191"
-    udns <- googlesheets4::read_sheet(url,  sheet = "FTF 20230915")  %>%
+    ##### get udn formulas from dis (from paul) ###########
+    url <- "https://docs.google.com/spreadsheets/d/14iw2pritdeb-oy8deb5klnn9hwbnhiawv7dits5ewvo/edit#gid=1094963191"
+    udns <- googlesheets4::read_sheet(url,  sheet = "ftf 20230915")  %>%
       dplyr::mutate(across(is.list, .fn = ~ as.character(unlist(.)))) %>%
       dplyr::rename_with(.cols = everything(.)
                          , .fn = ~ stringr::str_replace_all(., " ", ".")) %>%
-      dplyr::rename(#ro = Reporting.Organization
-        #, ou = Operating.Unit
-        #, a_code = Activity.Code
-        #, a_name = Activity.Name
-        , ic=Indicator.Code
-        #, ip = Activity.Vendor
-        #, a_end = Activity.End.Date
-        #, a_start = Activity.Start.Date
-        #, i_end = Indicator.End.Date
-        #, i_start = Indicator.Start.Date
-        , d_end = Disaggregate.End.Date
-        , d_start = Disaggregate.Start.Date
-        #, a_office = Activity.Office
-        #, status = Activity.Status
-        #, tags = Activity.Tags
-        #, id = ID.Managing.Office
-        #, m_code = Managing.Office.Code
-        #, m_office = Managing.Office.Name
-        #, country = Disaggregate.Country
-        , udn = UDN
-        #, year = Fiscal.Year
-        #, target = Target.Value
-        #, actual = Actual.Value
-      ) %>% # A tibble:4,129 × 21
+      dplyr::rename(#ro = reporting.organization
+        #, ou = operating.unit
+        #, a_code = activity.code
+        #, a_name = activity.name
+        , ic=indicator.code
+        #, ip = activity.vendor
+        #, a_end = activity.end.date
+        #, a_start = activity.start.date
+        #, i_end = indicator.end.date
+        #, i_start = indicator.start.date
+        , d_end = disaggregate.end.date
+        , d_start = disaggregate.start.date
+        #, a_office = activity.office
+        #, status = activity.status
+        #, tags = activity.tags
+        #, id = id.managing.office
+        #, m_code = managing.office.code
+        #, m_office = managing.office.name
+        #, country = disaggregate.country
+        , udn = udn
+        #, year = fiscal.year
+        #, target = target.value
+        #, actual = actual.value
+      ) %>% # a tibble:4,129 × 21
       dplyr::group_by(ic, udn) %>%
-      dplyr::slice(which.max(as.Date(Formula.Start.Date))) # A tibble:3,993 × 21
+      dplyr::slice(which.max(as.date(formula.start.date))) # a tibble:3,993 × 21
 
 
     cols <- c(names(udns)[names(udns) %in% names(indicators)]
-              , "Formula")
+              , "formula")
     udns <- dplyr::select(udns, tidyselect::all_of(cols))
 
-    lapply(list_udns(udns$Formula)
-           , FUN = function(x) paste(udns$ic, x))
+    lapply(list_udns(udns$formula)
+           , fun = function(x) paste(udns$ic, x))
 
-    list_udns(udns$Formula) %>% length()
+    list_udns(udns$formula) %>% length()
 
     udns <- udns %>%
       dplyr::mutate(uudn = paste(ic, udn, sep="_")
-             , udn_formulas = purrr::map2_vec(Formula, ic,
+             , udn_formulas = purrr::map2_vec(formula, ic,
                ~ dplyr::case_when(lengths(list_udns(.x)) > 0
                     ~ lapply(list_udns(.x), function(x) paste(.y, x, sep="_"))
-                 , .default = list(NA_character_)))
+                 , .default = list(na_character_)))
              , .after=ic) %>%
       dplyr::ungroup()
 
     indicators <- indicators %>%
       dplyr::left_join(
-        dplyr::select(udns, -c(d_end, d_start, Disaggregate.Code, Disaggregate.Name)))
+        dplyr::select(udns, -c(d_end, d_start, disaggregate.code, disaggregate.name)))
 
 
-    # Activities/ Implemenitng mechanisms lookup ##################
+    # activities/ implemenitng mechanisms lookup ##################
     activities <- dat %>%
       dplyr::distinct(ro , ou, a_code, a_name, ip
                , a_end, a_start
                , a_office, status, tags
-               , Is.COVID, Is.Disaggregate.Blank, Is.FTF, Is.IPS, Is.Neither.PPR.PMP
-               , Is.PMP, Is.PPR) %>%
+               , is.covid, is.disaggregate.blank, is.ftf, is.ips, is.neither.ppr.pmp
+               , is.pmp, is.ppr) %>%
       dplyr::mutate(id = return_id(.), .before = tidyselect::everything())
 
 
-    ###### Countries#####
+    ###### countries#####
     ftf_target_countries <- data.frame(
-      country = c("Bangladesh","Democratic Republic of the Congo",
-                  "Ethiopia","Ghana", "Guatemala","Honduras",
-                  "Kenya","Liberia", "Madagascar","Malawi",
-                  "Mali","Mozambique", "Nepal","Niger",
-                  "Nigeria","Rwanda","Senegal","Tanzania",
-                  "Uganda","Zambia"), ftf_target = TRUE)
+      country = c("bangladesh","democratic republic of the congo",
+                  "ethiopia","ghana", "guatemala","honduras",
+                  "kenya","liberia", "madagascar","malawi",
+                  "mali","mozambique", "nepal","niger",
+                  "nigeria","rwanda","senegal","tanzania",
+                  "uganda","zambia"), ftf_target = TRUE)
     file_path <- paste0(input_dir, "ppp_countries.csv")
     ppp_countries <- read.csv(file_path)
 
     countries <-  dat %>%
-      dplyr::distinct(country = stringr::str_to_title(Disaggregate.Country)) %>%
+      dplyr::distinct(country = stringr::str_to_title(disaggregate.country)) %>%
       dplyr::filter(country != "") %>%
       dplyr::mutate(id = rownames(.), .before = tidyselect::everything()) %>%
       dplyr::left_join(ftf_target_countries) %>%
-      dplyr::left_join(ppp_countries, dplyr::join_by(country == Disaggregate.Country))
+      dplyr::left_join(ppp_countries, dplyr::join_by(country == disaggregate.country))
 
-    ##### Countries disaggregate lookup ######
+    ##### countries disaggregate lookup ######
     disaggregate_countries <- dat %>%
-      dplyr::distinct(ic, a_code, udn, Disaggregate.Country) %>%
+      dplyr::distinct(ic, a_code, udn, disaggregate.country) %>%
       dplyr::mutate(id = disR::return_id(.)
-                    , Disaggregate.Country = dplyr::na_if(Disaggregate.Country, "")
+                    , disaggregate.country = dplyr::na_if(disaggregate.country, "")
                     , .before = everything()) %>%
-      dplyr::filter(!is.na(Disaggregate.Country)) %>%
+      dplyr::filter(!is.na(disaggregate.country)) %>%
       dplyr::arrange(a_code)
 
-    # Offices
+    # offices
     offices <- dat %>%
       dplyr::distinct(m_code, m_office) %>%
       dplyr::mutate(id = return_id(.), .before = tidyselect::everything())
 
 
-    # Values
+    # values
     values <- dat %>% # 3,653,389
       # indicators
       dplyr::left_join(indicators) %>%
@@ -464,34 +555,34 @@ make_database <- function(input_dir = "../../indicators/basic/"
       dplyr::mutate(id = return_id(.), .before = tidyselect::everything())
 
 
-    file_path <- paste0(input_dir, "/API_PA.NUS.PPP_DS2_en_csv_v2_5734723.csv")
+    file_path <- paste0(input_dir, "/api_pa.nus.ppp_ds2_en_csv_v2_5734723.csv")
     ppp <- read.csv(file_path, skip = 4) %>%
-      dplyr::select(-`Indicator.Name`,- `Indicator.Code`) %>%
-      tidyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
+      dplyr::select(-`indicator.name`,- `indicator.code`) %>%
+      tidyr::pivot_longer(-c(`country.name`, `country.code`),
                    names_to = "year", values_to = "ppp_multiplier") %>%
-      dplyr::mutate(year = as.integer(stringr::str_remove(year, "X"))) %>%
+      dplyr::mutate(year = as.integer(stringr::str_remove(year, "x"))) %>%
       dplyr::filter(!is.na(ppp_multiplier))
 
-    file_path <- paste0(input_dir, "/API_PA.NUS.PRVT.PP_DS2_en_csv_v2_5734724.csv")
+    file_path <- paste0(input_dir, "/api_pa.nus.prvt.pp_ds2_en_csv_v2_5734724.csv")
     prvt_pp <- read.csv(file_path, skip = 4) %>%
-      dplyr::select(-`Indicator.Name`,- `Indicator.Code`) %>%
-      tidyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
+      dplyr::select(-`indicator.name`,- `indicator.code`) %>%
+      tidyr::pivot_longer(-c(`country.name`, `country.code`),
                    names_to = "year", values_to = "prvt_pp") %>%
-      dplyr::mutate(year = as.integer(stringr::str_remove(year, "X"))) %>%
+      dplyr::mutate(year = as.integer(stringr::str_remove(year, "x"))) %>%
       dplyr::filter(!is.na(prvt_pp))
 
-    file_path <- paste0(input_dir, "/API_PA.NUS.FCRF_DS2_en_csv_v2_5729637.csv")
+    file_path <- paste0(input_dir, "/api_pa.nus.fcrf_ds2_en_csv_v2_5729637.csv")
     exch_rate <- read.csv(file_path, skip = 4) %>%
-      dplyr::select(-`Indicator.Name`,- `Indicator.Code`) %>%
-      tidyr::pivot_longer(-c(`Country.Name`, `Country.Code`),
+      dplyr::select(-`indicator.name`,- `indicator.code`) %>%
+      tidyr::pivot_longer(-c(`country.name`, `country.code`),
                    names_to = "year", values_to = "exch_rate") %>%
-      dplyr::mutate(year = as.integer(stringr::str_remove(year, "X"))) %>%
+      dplyr::mutate(year = as.integer(stringr::str_remove(year, "x"))) %>%
       dplyr::filter(!is.na(exch_rate))
 
-    # save all objects to an Rdata file
+    # save all objects to an rdata file
     save(indicators, activities, countries, disaggregate_countries, ppp, prvt_pp, exch_rate
          , ppp_countries, ftf_target_countries, offices, values, udns
-         , file = paste0(output_dir, db, ".Rdata"))
+         , file = paste0(output_dir, db, ".rdata"))
 
   }
 }
