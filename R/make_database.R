@@ -35,6 +35,7 @@ make_database <- function(input_dir = "../../indicators/basic/"
 
     # reclassify disaggregates
     reclassify_disag1 <- function(uic, d1, d2 , d3, d4) {
+      # should result in one of: sex, age, commodity, management practice
       dplyr::case_when(
         # headcount
         uic %in% c("eg.3-2", "eg.3-2_oulevel") ~ d1
@@ -153,9 +154,8 @@ make_database <- function(input_dir = "../../indicators/basic/"
           stringr::str_detect(d3, "producer") ~ "producer"
         , uic == "eg.3.2-27/eg.3.2-x6" &
           stringr::str_detect(d3, "firm") ~  "firm"
-        uic == "eg.3.2-27/eg.3.2-x6" &
+        , uic == "eg.3.2-27/eg.3.2-x6" &
           stringr::str_detect(d3, "size") ~  "size"
-        "size of recipient(s)"
       )
     }
 
