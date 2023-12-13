@@ -16,11 +16,13 @@ library(disR)
 
 
 ```{r}
+# Download data from:
+# https://docs.google.com/spreadsheets/d/1I5TDMy7dyBHjTZ5D8K7I_MtPfFG4qPI7o084fBhAtMo/edit#gid=0
 load("../../data/extract.Rdata")
 
 gender_finance <- filter_indicators(ind_code = "EG.3.2-27", dn = "Sex") %>% 
    
-  join_tables()  %>% 
+ join_tables()  %>% 
 
  mutate(unit = if_else(substr(udn, 5, 5) == "2", "Number"
                 , if_else(substr(udn, 5, 5) == "1", "Value","PROCESS"))) %>%
@@ -243,8 +245,9 @@ participants <- c("Bangladesh", "Burkina Faso"
 
 all_data %>% filter(str_detect(ou, "Sudan"))
 all_data <- all_data %>% filter(ou %in% participants) %>% arrange(ou)
-map2(.x = all_data$ou
-     , .y = all_data$data
-     , .f = ~ sheet_write(.y, ss=glee_sheet, as.character(.x)), quitely= T)
+
+# map2(.x = all_data$ou
+#      , .y = all_data$data
+#      , .f = ~ sheet_write(.y, ss=glee_sheet, as.character(.x)), quitely= T)
 
 ```
