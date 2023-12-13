@@ -35,7 +35,6 @@ make_database <- function(input_dir = "../../indicators/basic/"
 
     # reclassify disaggregates
     reclassify_disag1 <- function(uic, d1, d2 , d3, d4) {
-      # should result in one of: sex, age, commodity, management practice
       dplyr::case_when(
         # headcount
         uic %in% c("eg.3-2", "eg.3-2_oulevel") ~ d1
@@ -216,34 +215,22 @@ make_database <- function(input_dir = "../../indicators/basic/"
       , .default = ic)
       , .after = ic) %>%
     dplyr::mutate(across(c(d1, d2, d3, d4),
-                         ~ str_replace_all(str_trim(.), disags_replace_all)))
+                         ~ str_replace_all(str_trim(.), disags_replace_all))) %>%
 
-  # create disaggregates lookup
-  indicators <- indicators_df %>%
-    dplyr::distinct(ic, uic, d1, d2, d3, d4) %>%
-    dplyr::mutate(id = disR::return_id(.), .before = everything())
-
-  # create target values lookup
-  values <- indicators_df %>%
-    # filter(type == "target") %>%
-    dplyr::left_join(indicators) %>%
-    dplyr::rename(id_ind = id)
-
-  indicators <- indicators %>%
     #encode combination categories
     # https://docs.google.com/document/d/1qwfblce3uummzky7abcmcb_tx_mb7d7iekhun-5zhlu/edit
     dplyr::mutate(group = dplyr::case_when(
       ic %in% c("eg.3.2-25", "eg.3.2-x18") &
-            d1 %in% c("crop land", "cultivated pasture", "cultivated land") &
-            d2 =="sex" ~ "cultivated land"
+        d1 %in% c("crop land", "cultivated pasture", "cultivated land") &
+        d2 =="sex" ~ "cultivated land"
       , ic %in% c("eg.3.2-25", "eg.3.2-x18") & d1 %in% c("aquaculture") &
-            d2 =="sex" ~  "aquaculture"
+        d2 =="sex" ~  "aquaculture"
       , ic %in% c("eg.3.2-25", "eg.3.2-x18") & d1 %in% c("other") &
-            d2 =="sex" ~  "other"
+        d2 =="sex" ~  "other"
       , ic %in% c("eg.3.2-25", "eg.3.2-x18") &
-            d1 %in% c("conservation/protected area"
-                      , "freshwater or marine ecosystems", "rangeland") &
-            d2 =="sex" ~ "extensively managed"
+        d1 %in% c("conservation/protected area"
+                  , "freshwater or marine ecosystems", "rangeland") &
+        d2 =="sex" ~ "extensively managed"
       , .default = NA)
       , .after = everything()) %>%
 
@@ -258,6 +245,17 @@ make_database <- function(input_dir = "../../indicators/basic/"
            , disag4 = reclassify_disag4(uic, d1, d2, d3, d4)) %>%
     relocate(c(d1, d2, d3, d4), .after=everything())
 
+  # create disaggregates lookup
+  indicators <- indicators_df %>%
+    dplyr::distinct(ic, uic, d1, d2, d3, d4) %>%
+    dplyr::mutate(id = disR::return_id(.), .before = everything())
+
+  # create target values lookup
+  values <- indicators_df %>%
+    # filter(type == "target") %>%
+    dplyr::left_join(indicators) %>%
+    dplyr::rename(id_ind = id)
+
 ## sex and age indicators #####
 
   ##### eg.3-2 #####
@@ -269,7 +267,6 @@ make_database <- function(input_dir = "../../indicators/basic/"
   producers_indicators <- indicators %>%
     dplyr::filter(uic == "eg.3.2-24/eg.3.2-x17" & d2 !=  "commodity") %>%
     dplyr::select(-c(d1, d2, d3, d4))
-
 
   ###### eg.3.2-25/x18 #####
   hectares_indicators <- indicators %>%
