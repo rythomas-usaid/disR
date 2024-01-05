@@ -15,3 +15,4 @@ join_tables <- function(x) {
               , suffix = c("_ind", "_val") # label variables
               , keep = FALSE)
 }
+

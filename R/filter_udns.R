@@ -3,7 +3,7 @@
 #' @export
 filter_udns <- function(ind_code, dn) {
   filtered <- udns %>%
-    filter(ic %in% ind_code & Disaggregate.Name == dn) %>%
+    filter(ic %in% ind_code & str_detect(Disaggregate.Name, dn)) %>%
     ungroup() %>%
     filter(nchar(udn) == max(nchar(udn))) %>%
     select(udn_formulas) %>%
