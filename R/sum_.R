@@ -4,7 +4,9 @@
 #' vectors that have all NA values, which is not desired behavior especially
 #' for the Feed the Future indicator analysis.
 #' @param x A vector that you want to sum
-#'
-#'
 #' @export
-sum_ <- function(x) if(all(is.na(x))) NA_real_ else sum(x, na.rm=T)
+sum_ <- function(...) {
+  x <- c(...)
+  if(all(is.na(x))) NA_real_ else return(sum(x, na.rm=T))
+}
+

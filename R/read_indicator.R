@@ -1,4 +1,4 @@
-#' Read Google Sheets data and select columns
+#' Read indicator spreadsheets modified from the format of Magnus's Google Sheets
 #'
 #'
 #' @export
