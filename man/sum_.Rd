@@ -4,7 +4,7 @@
 \alias{sum_}
 \title{Sum values in a vector and preserve NA if all are NA.}
 \usage{
-sum_(x)
+sum_(...)
 }
 \arguments{
 \item{x}{A vector that you want to sum}

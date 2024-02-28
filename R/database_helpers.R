@@ -1,6 +1,6 @@
 #' helpers for parsing disaggregates
 #'
-#'
+#' @import tidyverse
 #' @export return_id
 return_id <- function(row) {
   l <- round(log10(nrow(row))+1,0)
@@ -20,7 +20,8 @@ reclassify_disag1 <- function(uic, ic, d1, d2 , d3, d4) {
     # hectares
     , ic %in% c("eg.3.2-25", "eg.3.2-x18") ~ d2
     # sales
-    , ic %in% c("eg.3.2-26", "eg.3.2-x19") ~ d3
+    , ic == "eg.3.2-26" ~ d3
+    # , ic == "eg.3.2-x19" ~ d1
     # financing
     , ic == "eg.3.2-27" ~ d3
     # , ic == "eg.3.2-x6" ~ d1
@@ -38,7 +39,7 @@ reclassify_disag1 <- function(uic, ic, d1, d2 , d3, d4) {
     , ic == "hl.9-3" & d1 == "age" ~ d1
     , ic == "hl.9.3" & d1 != "age" ~ NA
     , ic == "hl.9-4" & d1 == "sex" ~ d1
-    , ic == "hl.9-4" & d1 == "sex" ~ NA
+    , ic == "hl.9-4" & d1 != "sex" ~ NA
     , ic == "hl.9-x1" | ic == "hl.9-x15" ~ "sex"
     , ic == "eg.3.3-x11" ~ "commodity"
     , .default = d1
@@ -61,7 +62,7 @@ reclassify_disag2 <- function(uic, ic, d1, d2, d3, d4, typeof) {
     # producers
     , uic == "eg.3.2-24/eg.3.2-x17"  ~ d3
     # hectares
-    , uic == "eg.3.2-25/eg.3.2-x18"  ~ d3
+    , ic == "eg.3.2-25/eg.3.2-x18"  ~ d3
     # sales
     , uic == "eg.3.2-26/eg.3.2-x19" ~ sub(" -.*", "", d4)
     # financing
@@ -80,13 +81,15 @@ reclassify_disag2 <- function(uic, ic, d1, d2, d3, d4, typeof) {
 reclassify_disag3 <- function(uic, ic, d1, d2, d3, d4) {
   dplyr::case_when(
     # producers
-    uic == "eg.3.2-24/eg.3.2-x17"  ~ d1
+    ic == "eg.3.2-24"  ~ d1
     # hectares
-    , uic == "eg.3.2-25/eg.3.2-x18"  ~ d1
+    , ic == "eg.3.2-25"  ~ d1
+    , ic == "eg.3.2-x18"  ~ d1
     # sales
-    , uic == "eg.3.2-26/eg.3.2-x19" ~ d2
+    , ic == "eg.3.2-26" ~ d2
+    , ic == "eg.3.2-x19" ~ d4
     # financing
-    , uic == "eg.3.2-27/eg.3.2-x6" ~ sub(".*: ", "", d1)
+    , ic == "eg.3.2-27" ~ sub(".*: ", "", d1)
     , ic == "hl.8.2-5" & stringr::str_detect(d2, "both") ~ "water and soap available"
     , ic == "hl.8.2-5" & stringr::str_detect(d2, "both", negate=TRUE) ~ "covered households"
     , .default = d3

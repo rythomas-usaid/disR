@@ -1,5 +1,7 @@
 #' Functions to parse udns that are the unique udns to calculate indicator totals
 #'
+#'
+#' @import tidyverse
 #' @export filter_udns
 filter_udns <- function(ic, udn) {
   filtered <- udns %>%

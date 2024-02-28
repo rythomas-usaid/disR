@@ -2,10 +2,10 @@
 % Please edit documentation in R/read_indicator.R
 \name{read_indicator}
 \alias{read_indicator}
-\title{Read Google Sheets data and select columns}
+\title{Read indicator spreadsheets modified from the format of Magnus's Google Sheets}
 \usage{
-read_indicator(x, sheet = "IM Full Disaggs")
+read_indicator(x, sheet = "IM Full Disaggs", version = "relational")
 }
 \description{
-Read Google Sheets data and select columns
+Read indicator spreadsheets modified from the format of Magnus's Google Sheets
 }

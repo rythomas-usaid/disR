@@ -6,8 +6,10 @@
 #' @return data.frame with combined ftfms and DIS data
 #' @examples
 #' #' combine_extracts()
+#' @import tidyverse
 #'
-#' @export
+#' @export rbind_dis_to_ftfms
+
 rbind_dis_to_ftfms <- function(input_dir = "../../indicators/extract/"
                                , output_dir = "../data/") {
 
@@ -18,38 +20,8 @@ rbind_dis_to_ftfms <- function(input_dir = "../../indicators/extract/"
     paste0(input_dir
            , "DIS ENT - OU Activity Indicator Results (All Data)_20230622 Extract_Extract.csv")
     , colClasses=c("Activity.Code"="character")
-    , na.strings = "") %>% as.data.frame()
-
-  print("Renaming and columns ... ")
-  # make lowercase names
-  names(dat) <- tolower(names(dat))
-  #dat$x <- NULL
-  names(dat)[names(dat) == "reporting.organization"] <- "ro"
-  names(dat)[names(dat) == "operating.unit"] <- "ou"
-  names(dat)[names(dat) == "activity.code"] <- "a_code"
-  names(dat)[names(dat) == "activity.name"] <- "a_name"
-  names(dat)[names(dat) == "indicator.code"] <- "ic"
-  names(dat)[names(dat) == "indicator.name"] <- "i_name"
-  names(dat)[names(dat) == "activity.vendor"] <- "ip"
-  names(dat)[names(dat) == "activity.end.date"] <- "a_end"
-  names(dat)[names(dat) == "activity.start.date"] <- "a_start"
-  names(dat)[names(dat) == "indicator.end.date"] <- "i_end"
-  names(dat)[names(dat) == "indicator.start.date"] <- "i_start"
-  names(dat)[names(dat) == "disaggregate.end.date"] <- "d_end"
-  names(dat)[names(dat) == "disaggregate.start.date"] <- "d_start"
-  names(dat)[names(dat) == "disaggregate.name"] <- "d_name"
-  names(dat)[names(dat) == "disaggregate.country"] <- "country"
-  names(dat)[names(dat) == "disaggregate.commodity"] <- "commodity"
-  names(dat)[names(dat) == "activity.office"] <- "a_office"
-  names(dat)[names(dat) == "activity.status"] <- "status"
-  names(dat)[names(dat) == "activity.tags"] <- "tags"
-  names(dat)[names(dat) == "id.managing.office"] <- "id"
-  names(dat)[names(dat) == "managing.office.code"] <- "m_code"
-  names(dat)[names(dat) == "managing.office.name"] <- "m_office"
-  names(dat)[names(dat) == "udn"] <- "udn"
-  names(dat)[names(dat) == "fiscal.year"] <- "year"
-  names(dat)[names(dat) == "target.value"] <- "target"
-  names(dat)[names(dat) == "actual.value"] <- "actual"
+    , na.strings = "") %>% as.data.frame() %>%
+    rename_extract_columns()
 
   # print("Changing all characters to lower case ...")
   # make sure all the values are lowercase
@@ -91,7 +63,7 @@ rbind_dis_to_ftfms <- function(input_dir = "../../indicators/extract/"
   # dat$third_order <- NULL
   # dat$fourth_order <- NULL
 
-  # as_tibble(dat) %>% left_join(dcw, relationship = "many-to-one")
+  dat <- as_tibble(dat) %>% left_join(dcw, relationship = "many-to-one")
 
 
   ## Read FTFMS data ####
@@ -152,6 +124,8 @@ rbind_dis_to_ftfms <- function(input_dir = "../../indicators/extract/"
   df <- dplyr::bind_rows(dat, ms) %>%
     dplyr::mutate(uic = make_uic(tolower(ic), tolower(d1), tolower(d2)))
 
-  # write.csv(df, paste0(output_dir, "combined_extracts.csv"))
-  return(df)
+  write.csv(df, paste0(output_dir, "combined_extracts.csv"))
+  save(df, file = "../data/combined_extracts.Rdata")
+  # return(df)
+
 }

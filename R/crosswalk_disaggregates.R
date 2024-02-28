@@ -1,19 +1,6 @@
-#' make 1st order disaggregates
-#'
-#' create a single database from all the final indicator spreadsheets.
-#' @return a vector (column) of strings with disaggregates
-#' @examples
-#' dcw <- make_dis_crosswalk()
-#' @import tidyverse
-
-
-
-# FTFMS ####
 #' Standardize FTFMS disaggregates
 #'
-#' These four functions are used in a mutate statement in `rbind_dis_to_ftfms.R`. They use case_when to
-#' create standardized disaggregates for d1, d2, d3, d4 to match the
-#' DIS disaggregates.
+#' These four functions are used in a mutate statement in 'rbind_dis_to_ftfms.R'. They use case_when to create standardized disaggregates for d1, d2, d3, d4 to match the DIS disaggregates.
 #' @param ic a vector (column) of indicator codes
 #' @param ms_d1 a vector (column) of DisaggregationName1 from the FTFMS database
 #' @param ms_d2 a vector (column) of DisaggregationName2 from the FTFMS database
@@ -23,9 +10,9 @@
 #' @return a vector (column) of strings with disaggregates
 #' @examples
 #' if(exists(ms)) ms %>% mutate(d4 = fourth_order())
-
-## Fourth order####
 #' @export fourth_order
+# FTFMS ####
+## Fourth order####
 fourth_order <- function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
   ##FTFMS##
   dplyr::case_when(ic == "EG.3.2-26" & ms_d4 == "Females - Value of sales (in $USD)"          ~ "Female - Value of Sales"
@@ -92,9 +79,7 @@ fourth_order <- function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
 ## Third order####
 #' Standardize FTFMS disaggregates
 #'
-#' These four functions are used in a mutate statement in `rbind_dis_to_ftfms.R`. They use case_when to
-#' create standardized disaggregates for d1, d2, d3, d4 to match the
-#' DIS disaggregates.
+#' These four functions are used in a mutate statement in 'rbind_dis_to_ftfms.R'. They use case_when to create standardized disaggregates for d1, d2, d3, d4 to match the DIS disaggregates.
 #' @param ic a vector (column) of indicator codes
 #' @param ms_d1 a vector (column) of DisaggregationName1 from the FTFMS database
 #' @param ms_d2 a vector (column) of DisaggregationName2 from the FTFMS database
@@ -248,9 +233,7 @@ third_order <- function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
 ## Second order ####
 #' Standardize FTFMS disaggregates
 #'
-#' These four functions are used in a mutate statement in `rbind_dis_to_ftfms.R`. They use case_when to
-#' create standardized disaggregates for d1, d2, d3, d4 to match the
-#' DIS disaggregates.
+#' These four functions are used in a mutate statement in 'rbind_dis_to_ftfms.R'. They use case_when to create standardized disaggregates for d1, d2, d3, d4 to match the DIS disaggregates.
 #' @param ic a vector (column) of indicator codes
 #' @param ms_d1 a vector (column) of DisaggregationName1 from the FTFMS database
 #' @param ms_d2 a vector (column) of DisaggregationName2 from the FTFMS database
@@ -258,8 +241,8 @@ third_order <- function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
 #' @param ms_d4 a vector (column) of DisaggregationName4 from the FTFMS database
 #'
 #' @return a vector (column) of strings with disaggregates
-#' @examples
-#' if(exists(ms)) ms %>% mutate(d2 = second_order())
+#' @export second_order
+
 second_order <-  function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
   dplyr::case_when(
     ic == "CBLD-9" & ms_d3 == "Numerator = number of organizations of this type with improved performance" ~ "Number of Organizations with Improved Performance"
@@ -557,9 +540,7 @@ second_order <-  function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
 ## First order ####
 #' Standardize FTFMS disaggregates
 #'
-#' These four functions are used in a mutate statement in `rbind_dis_to_ftfms.R`. They use case_when to
-#' create standardized disaggregates for d1, d2, d3, d4 to match the
-#' DIS disaggregates.
+#' These four functions are used in a mutate statement in 'rbind_dis_to_ftfms.R'. They use case_when to create standardized disaggregates for d1, d2, d3, d4 to match the DIS disaggregates.
 #' @param ic a vector (column) of indicator codes
 #' @param ms_d1 a vector (column) of DisaggregationName1 from the FTFMS database
 #' @param ms_d2 a vector (column) of DisaggregationName2 from the FTFMS database
@@ -567,8 +548,7 @@ second_order <-  function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
 #' @param ms_d4 a vector (column) of DisaggregationName4 from the FTFMS database
 #'
 #' @return a vector (column) of strings with disaggregates
-#' @examples
-#' if(exists(ms)) ms %>% mutate(d1 = first_order())
+#' @export first_order
 first_order <- function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
   dplyr::case_when(
     ##CBLD-9####
@@ -7547,10 +7527,10 @@ d1 <-  dplyr::bind_rows(
 # Combine ####
 ## DIS ####
 disaggregate_crosswalk <-  dplyr::bind_rows(
-  dplyr::mutate(d1, order = "first_order")
-  ,  dplyr::mutate(d2, order = "second_order")
-  ,  dplyr::mutate(d3, order = "third_order")
-  ,  dplyr::mutate(d4, order = "fourth_order")
+  dplyr::mutate(d1, order = "d1")
+  ,  dplyr::mutate(d2, order = "d2")
+  ,  dplyr::mutate(d3, order = "d3")
+  ,  dplyr::mutate(d4, order = "d4")
   ) %>%
   dplyr::select(ic, udn, name, order) %>%
   dplyr::filter(!is.na(udn))%>%
@@ -7559,7 +7539,11 @@ disaggregate_crosswalk <-  dplyr::bind_rows(
   # dplyr::filter(n > 1L)
   tidyr::pivot_wider(id_cols = c(ic, udn)
                      , names_from = order
-                     , values_from = name)
+                     , values_from = name) %>%
+  mutate(is_indicator_total = case_when(
+    ic == "EG.3.2-26" & d3 == "Sex" & str_detect(d4, "Value") ~ TRUE
+    ,
+  ))
 
 return(disaggregate_crosswalk)
 
