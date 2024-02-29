@@ -32,16 +32,15 @@ print_udns <- function(ic) {
 extract_udns <- function(x) {
   stringr::str_replace_all(x, "[()/+*]|100|manual|na", " ") %>%
     stringr::str_extract_all(stringr::boundary("word"))
+  return(extract_udns)
 }
 
 #' @export filter_indicators
-filter_indicators <- function(ic, udn) {
-
-  warning("using extract version of filter_indicators")
+filter_indicators <- function(x, ic, udn) {
 
   uudns <- filter_udns(ic = ic, udn = udn)
 
-  filtered <- indicators %>%
+  filtered <- x %>%
     filter(uudn %in% uudns)
 
   return(filtered)
