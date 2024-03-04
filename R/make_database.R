@@ -4,7 +4,8 @@
 #' @param input_dir character. The directory with all of the indicator files in the same format (xlsx by default).
 #' @param output_dir character. The directory where you want to store the output files.
 #' @param input_pattern character. The file format for all input files.
-#' @param version character. One of c("relational", "tidy") to specify the format of the data. The default is "relational".
+#' @param format character. One or both (default) of c("relational", "tidy") to specify the format of the data. The default is "relational".
+#' @param version character. The folder where to locate the output_dir. The default is `sys.Date()`.
 #' @return saves database in .rdata format in the specified directory.
 #' @examples
 #' make_database()
@@ -14,15 +15,21 @@
 #'
 #' @export make_database
 make_database <- function(input_dir = "../../indicators/basic"
-                          , output_dir = "../data/", version = "relational") {
+                          , output_dir = "../data/", format = c("relational", "tidy"), version = Sys.Date()) {
 
   indicator_files <- list.files(paste0(input_dir), pattern = "xlsx", full.names = T)
 
+  output_dir <- paste0(output_dir, version)
+
+  if( !exists(output_dir) ) dir.create(output_dir)
+
   if(!exists("disags_replace_all")) stop("disags_replace_all does not exist.")
 
-  if(version == "relational") {
+  make_relational <- function() {
     # TODO: eg.3-x6-7-8 has mixed units
     # READ Files ####
+
+    format <- "relational"
 
     print(paste("About to read", length(indicator_files), "files..."))
 
@@ -38,11 +45,11 @@ make_database <- function(input_dir = "../../indicators/basic"
       dplyr::mutate(across(c(ic, d1, d2, d3, d4), ~ stringr::str_to_lower(.))) %>%
       dplyr::relocate(c(d3, d4), .after=d2) %>%
       dplyr::filter(!is.na(value)) %>%
-      dplyr::mutate(year = paste0("FY", year)) %>%
+      dplyr::mutate(year = as.integer(year)) %>%
       dplyr::mutate(uic = make_uic(ic, d1, d2)
                     , .after = ic) %>%
       dplyr::mutate(across(c(d1, d2, d3, d4),
-                           ~ stringr::str_replace_all(stringr::str_trim(.), disags_replace_all))) %>%
+           ~ stringr::str_replace_all(stringr::str_trim(.), disags_replace_all))) %>%
       ### Remove total values for Financing ####
     dplyr::filter(!(ic == "eg.3.2-27" & ! stringr::str_detect(d1, "type of")))
 
@@ -60,12 +67,11 @@ make_database <- function(input_dir = "../../indicators/basic"
       #   , ic %in% c("eg.3.2-25", "eg.3.2-x18") & d1 %in% c("other") &
       #     d2 =="sex" ~  "other"
       #   , ic %in% c("eg.3.2-25", "eg.3.2-x18") &
-    #     d1 %in% c("conservation/protected area"
-    #               , "freshwater or marine ecosystems", "rangeland") &
-    #     d2 =="sex" ~ "extensively managed"
-    #   , .default = NA)
-    #   , .after = everything()) %>%
-
+      #  d1 %in% c("conservation/protected area"
+      #               , "freshwater or marine ecosystems", "rangeland") &
+      #  d2 =="sex" ~ "extensively managed"
+      #  , .default = NA)
+      #  , .after = everything()) %>%
 
     ### Make intuitive categories ####
     dplyr::mutate(unit = reclassify_unit(ic, d1, d2, d3, d4)
@@ -74,13 +80,16 @@ make_database <- function(input_dir = "../../indicators/basic"
                   , disag1 = reclassify_disag1(ic, d1, d2, d3, d4)
                   , disag2 = reclassify_disag2(ic, d1, d2, d3, d4, typeof)
                   , disag3 = reclassify_disag3(ic, d1, d2, d3, d4)
-                  , disag4 = reclassify_disag4(ic, d1, d2, d3, d4)) # %>% filter(uic == "eg.3.2-27/eg.3.2-x6") %>% distinct(disag1)
+                  , disag4 = reclassify_disag4(ic, d1, d2, d3, d4))
 
     print("Finished standarizing disaggregates...")
 
+    disaggregate_crosswalk <- make_disaggregate_crosswalk() %>%
+      add_disaggregate_categories()
+
     # TODO: make these based on the disag columns that are more standardized
     ftf_full_join <- ftf_full_join %>%
-      add_disaggreate_categories() %>%
+      add_disaggregate_categories() %>%
       dplyr::mutate(across(-value, ~ trimws(.)))
 
 
@@ -93,58 +102,62 @@ make_database <- function(input_dir = "../../indicators/basic"
                       , disag1, disag2, disag3, disag4
                       , d1, d2, d3, d4) %>%
       dplyr::mutate(id = disR::return_id(.), .before = everything())
-    #
-    # # create target values lookup
-    # values <- ftf_full_join %>%
-    #   # filter(type == "target") %>%
-    #   dplyr::left_join(indicators) %>%
-    #   dplyr::rename(id_ind = id)
-    #
-    #
-    # ### other tables #########
-    # # create implementing mechanisms lookup
-    # ims <- ftf_full_join %>%
-    #   dplyr::distinct(ro, ou, a_code, a_name) %>%
-    #   dplyr::mutate(id = disR::return_id(.), .before = everything())
-    #
-    # values <- values %>%
-    #   dplyr::left_join(ims) %>%
-    #   dplyr::select(id_im = id, id_ind, type, year, value) %>%
-    #   dplyr::relocate(c(id_im, id_ind), .before=tidyselect::everything()) %>%
-    #   dplyr::mutate(id = disR::return_id(.), .before = tidyselect::everything())
-    #
-    #
-    # ftf_target_countries <- data.frame(
-    #   country = c("Bangladesh","Democratic Republic of the Congo"
-    #               , "Ethiopia","Ghana","Guatemala","Honduras","Kenya","Liberia"
-    #               , "Madagascar","Malawi", "Mali","Mozambique", "Nepal","Niger"
-    #               , "Nigeria","Rwanda", "Senegal","Tanzania", "Uganda","Zambia")
-    #   , ftf_target = TRUE)
-    #
-    # ### specific indicator tables ################
-    # sex_indicators <- indicators %>%
-    #   filter(!is.na(sex)) %>%
-    #   select(where(function(x) any(!is.na(x))))
-    #
-    # age_indicators <- indicators %>%
-    #   filter(!is.na(age)) %>%
-    #   select(where(function(x) any(!is.na(x))))
-    #
-    # size_indicators <- indicators %>%
-    #   filter(!is.na(size)) %>%
-    #   select(where(function(x) any(!is.na(x))))
-    #
-    # item_indicators <- indicators %>%
-    #   filter(!is.na(item)) %>%
-    #   select(where(function(x) any(!is.na(x))))
-    #
-    # mgmt_indicators <- indicators %>%
-    #   filter(!is.na(mgmt_practice)) %>%
-    #   select(where(function(x) any(!is.na(x))))
 
-    disaggregate_crosswalk <- make_disaggregate_crosswalk()
+     # create target values lookup
+     values <- ftf_full_join %>%
+       # filter(type == "target") %>%
+       dplyr::left_join(indicators) %>%
+       dplyr::rename(id_ind = id)
 
-    save(ftf_full_join, disaggregate_crosswalk, file = paste0(output_dir, "/basic.rdata"))
+
+     ### other tables #########
+     # create implementing mechanisms lookup
+     ims <- ftf_full_join %>%
+       dplyr::distinct(ro, ou, a_code, a_name) %>%
+       dplyr::mutate(id = disR::return_id(.), .before = everything())
+
+     values <- values %>%
+       dplyr::left_join(ims) %>%
+       dplyr::select(id_im = id, id_ind, type, year, value) %>%
+       dplyr::relocate(c(id_im, id_ind), .before=tidyselect::everything()) %>%
+       dplyr::mutate(id = disR::return_id(.), .before = tidyselect::everything())
+
+
+     ftf_target_countries <- data.frame(
+       country = c("Bangladesh","Democratic Republic of the Congo"
+                   , "Ethiopia","Ghana","Guatemala","Honduras","Kenya","Liberia"
+                   , "Madagascar","Malawi", "Mali","Mozambique", "Nepal","Niger"
+                   , "Nigeria","Rwanda", "Senegal","Tanzania", "Uganda","Zambia")
+       , ftf_target = TRUE)
+
+     ### specific indicator tables ################
+     sex_indicators <- indicators %>%
+       filter(!is.na(sex)) %>%
+       select(where(function(x) any(!is.na(x))))
+
+     age_indicators <- indicators %>%
+       filter(!is.na(age)) %>%
+       select(where(function(x) any(!is.na(x))))
+
+     size_indicators <- indicators %>%
+       filter(!is.na(size)) %>%
+       select(where(function(x) any(!is.na(x))))
+
+     item_indicators <- indicators %>%
+       filter(!is.na(item)) %>%
+       select(where(function(x) any(!is.na(x))))
+
+     mgmt_indicators <- indicators %>%
+       filter(!is.na(mgmt_practice)) %>%
+       select(where(function(x) any(!is.na(x))))
+
+     disaggregate_crosswalk <- make_disaggregate_crosswalk()
+
+
+
+    save(ftf_full_join, disaggregate_crosswalk, ims, values, sex_indicators,
+         mgmt_indicators, age_indicators, indicators, item_indicators,
+         ftf_target_countries, file = paste0(output_dir, "/basic.rdata"))
 
     write.csv(ftf_full_join, paste0(output_dir, "/", "ftf_full_join.csv"))
     write.csv(disaggregate_crosswalk, paste0(output_dir, "/", "disaggregate_crosswalk.csv"))
@@ -168,7 +181,10 @@ make_database <- function(input_dir = "../../indicators/basic"
     # sheet_write(item_indicators, "1AW1iQWhlXQ-lZKh7KvvdH6ZpPDLPR2PER0hXU-2VafQ", "item indicators")
     # sheet_write(ftf_target_countries, "1AW1iQWhlXQ-lZKh7KvvdH6ZpPDLPR2PER0hXU-2VafQ", "ftf target countries")
 
-  } else if(version == "tidy") {
+  }
+
+  make_tidy <- function() {
+    format <- "tidy"
     # READ Files ####
     indicator_files <- list.files(paste0(input_dir), pattern = "xlsx", full.names = T)
     indicator_files <- indicator_files[! stringr::str_detect(indicator_files, "-x")]
@@ -183,9 +199,9 @@ make_database <- function(input_dir = "../../indicators/basic"
 
     mapper <- tidyr::expand_grid(indicator_files, worksheet_names)
 
-    # START ftf_tidy_version ####
+    # START ftf_tidy_format ####
     ftf_tidy <- purrr::map2(.x = mapper$indicator_files, .y = mapper$worksheet_names
-                                , ~ disR::read_indicator(.x, sheet = .y, version = version)) %>%
+                                , ~ disR::read_indicator(.x, sheet = .y, format = format)) %>%
       purrr::list_rbind() %>%
       dplyr::rename(ro = RO
                     , ou = OU
@@ -218,19 +234,21 @@ make_database <- function(input_dir = "../../indicators/basic"
       dplyr::mutate(across(-value, ~ trimws(.))) %>%
       filter(!is.na(value)) %>% relocate(organization_level, .before=everything())
 
-    print("Tidy database complete. Writing files ...")
+    print(paste0("Tidy database complete. Writing files to", output_dir," ..."))
     save(ftf_tidy, file = paste0(output_dir, "/ftf_tidy.rdata"))
-    write.csv(ftf_tidy_version, paste0(output_dir, "/ftf_tidy_Version.csv"))
-    }
+    write.csv(ftf_tidy, paste0(output_dir, "/ftf_tidy.csv"))
 
+  }
+
+  if(all(c("relational", "tidy") %in% format)) {
+    make_relational()
+    make_tidy()
+  } else if(format == "relational") {
+    make_relational()
+  } else if(format == "tidy") {
+    make_tidy()
+  }
 }
-#
-#
-# This allows to troubleshoot the column names for all files.
-# test <- purrr::map2(.x = mapper$indicator_files, .y = mapper$worksheet_names
-#             , ~ if(.y %in% openxlsx::getSheetNames(.x)) {
-#               colnames(openxlsx::read.xlsx(.x, .y))
-#               }
-#             )
+
 
 
