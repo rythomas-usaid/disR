@@ -8,6 +8,7 @@
 #' @param ms_d4 a vector (column) of DisaggregationName4 from the FTFMS database
 #'
 #' @return a vector (column) of strings with disaggregates
+#'
 #' @examples
 #' if(exists(ms)) ms %>% mutate(d4 = fourth_order())
 #' @export fourth_order
@@ -860,7 +861,6 @@ first_order <- function(ic, ms_d1, ms_d2, ms_d3, ms_d4){
 # DIS ####
 #' @export make_disaggregate_crosswalk
 make_disaggregate_crosswalk <- function(){
-
 
   # TODO: Remove FTFMS from the DIS data. The UDNs cause multiples of the FTFMS disaggregates
   # Fourth order ####
@@ -3214,6 +3214,7 @@ d3 <-  dplyr::bind_rows(
 
 # Second order ####
 d2 <-   dplyr::bind_rows(
+  ## CBLD-9 ####
   tibble(ic = "CBLD-9"
          , udn = c("3.3.1.1", "3.3.2.1", "3.3.3.1", "3.3.4.1", "3.3.5.1", "3.3.6.1", "3.3.7.1", "3.3.8.1", "3.3.9.1", "3.3.10.1")
          , name = "Total Number of Organizations with Improved Performance"
@@ -3233,6 +3234,7 @@ d2 <-   dplyr::bind_rows(
          ##EG-c (Percent of People)##
          ##Percent of people living on less than $1.90/day (all household types together)##
   ),
+  ## EG-c ####
   tibble(ic = "EG-c", udn ="3.1.1"
          , name = "In All ZOIs/Areas Combined (%)"
   ),
@@ -3316,6 +3318,7 @@ d2 <-   dplyr::bind_rows(
          ##Household type: Male and Female Adults (M&F)##
          ##Percent of people living on less than $1.90/day in this gendered household type##
   ),
+  ## EG-d ####
   tibble(ic = "EG-d", udn ="3.2.1.1"
          , name = "Percent of People Living on Less than $1.90/Day in this Gendered Household Type"
          ##Number of people in this gendered household type##
@@ -3361,6 +3364,7 @@ d2 <-   dplyr::bind_rows(
          ##EG-e (Prevalence)##
          ##In All ZOIs/Areas Combined (%)##
   ),
+  ## EG-e ####
   tibble(ic = "EG-e"
          , udn = c("3.1.1", "3.2.1", "3.3.1", "3.5.1.1", "3.6.1.1", "3.7.1.1", "3.8.1.1", "3.9.1.1")
          , name = "In All ZOIs/Areas Combined (%)"
@@ -3402,6 +3406,7 @@ d2 <-   dplyr::bind_rows(
          ##EG-f (Prevalence)##
          ##Percent of People with Moderate and Severe Food Insecurity in this Gendered Household Type in the Country (%)##
   ),
+  ## EG-f ####
   tibble(ic = "EG-f"
          , udn = c("3.5.1", "3.6.1", "3.7.1", "3.8.1", "3.9.1")
          , name = "Percent of People with Moderate and Severe Food Insecurity in this Gendered Household Type in the Country (%)"
@@ -3413,6 +3418,7 @@ d2 <-   dplyr::bind_rows(
          ##EG-g (Percent of People)##
          ##Percent of Households Falling Below the Fixed Threshold for the Poorest Quintile of the Comparative Wealth Index (All Household Types Together)##
   ),
+  ## EG-g ####
   tibble(ic = "EG-g", udn ="3.1.1"
          , name = "In All ZOIs/Areas Combined (%)"
   ),
@@ -3495,6 +3501,7 @@ d2 <-   dplyr::bind_rows(
          ##EG-h (Percent of People)##
          ##Mean Percent Shortfall of the Poor (All Household Types Together)##
   ),
+  ## EG-h ####
   tibble(ic = "EG-h", udn ="3.1.1"
          , name = "In All ZOIs/Areas Combined (%)"
   ),
@@ -3577,6 +3584,7 @@ d2 <-   dplyr::bind_rows(
          ##EG.3-e (Percent Change)##
          ##Total Value Added in the Agri-food Sector in USD##
   ),
+  ## EG.3-e ####
   tibble(ic = "EG.3-e", udn ="3.1.1.1"
          , name = "Agriculture"
   ),
@@ -3594,6 +3602,7 @@ d2 <-   dplyr::bind_rows(
          ##EG.3-f (A-WEAI)##
          ##In All ZOI/Areas Combined##
   ),
+  ## EG.3-f ####
   tibble(ic = "EG.3-f"
          , udn = c("3.1.1", "3.2.1", "3.3.1", "3.4.1", "3.5.1", "3.6.1", "3.7.1", "3.8.1", "3.9.1", "3.10.1", "3.11.1")
          , name = "In All ZOI/Areas Combined"
@@ -3615,6 +3624,7 @@ d2 <-   dplyr::bind_rows(
          ##EG.3-g (Number of People)##
          ##Number of People Working in the Agri-food Sector Components##
   ),
+  ## EG.3-e ####
   tibble(ic = "EG.3-g", udn ="3.1.1"
          , name = "Agriculture"
   ),
@@ -3632,6 +3642,7 @@ d2 <-   dplyr::bind_rows(
          ##EG.3-x1 (Number of Households)##
          ##Gendered Household Type##
   ),
+  ## EG.3-x1 ####
   tibble(ic = "EG.3-x1"
          , ms_d2 = "Household type:  Adult Female no Adult Male (FNM)"
          , name = "Household Type: Adult Female No Adult Male (FNM)"
@@ -3677,27 +3688,35 @@ d2 <-   dplyr::bind_rows(
          ##EG.3-2 (Participants)##
          ##Sex##
   ),
-  tibble(ic = "EG.3-2"
-         , udn = "3.1.2"
-         , ms_d2 = "Female"
-         , name = "Female"
+    ## EG.3-2 ####
+  ##Sex##
+  tibble(ic = "EG.3-2", udn = "3.1.1", ms_d2 = "Male", name = "Male"
   ),
-  tibble(ic = "EG.3-2"
-         , udn = "3.1.1"
-         , ms_d2 = "Male"
-         , name = "Male"
-         ##Sex and Age##
+  tibble(ic = "EG.3-2", udn = "3.1.2", ms_d2 = "Female", name = "Female"
   ),
-  tibble(ic = "EG.3-2"
-         , udn = c("3.1.3", "3.2.4")
+  tibble(ic = "EG.3-2", udn = c("3.1.3")
          , ms_d2 = "Not Applicable (for household members counted from HH-level interventions)"
          , name = "Not Applicable"
   ),
   tibble(ic = "EG.3-2"
-         , udn = c("3.1.4", "3.2.5")
+         , udn = "3.1.4"
          , ms_d2 = "Disaggregates Not Available"
          , name = "Disaggregates Not Available"
          ##Age##
+  ),
+  tibble(ic = "EG.3-2"
+         , udn = "3.1.5"
+         , name = "Neither"
+         ##Age##
+  ),
+  ## Age ##
+  tibble(ic = "EG.3-2", udn = "3.2.4"
+         , ms_d2 = "Not Applicable (for household members counted from HH-level interventions)"
+         , name = "Not Applicable"
+  ),
+  tibble(ic = "EG.3-2", udn = "3.2.5"
+         , ms_d2 = "Disaggregates Not Available"
+         , name = "Disaggregates Not Available"
   ),
   tibble(ic = "EG.3-2"
          , udn = c("3.2.1")
@@ -5778,7 +5797,7 @@ d2 <-   dplyr::bind_rows(
 
 # First order ####
 d1 <-  dplyr::bind_rows(
-  ##CBLD-9##
+  ##CBLD-9#####
   ##Education (Higher Education, Secondary, Primary)##
   tibble(ic = "CBLD-9"
          , udn =  c("3.3.1.1", "3.3.1.2")
@@ -5837,7 +5856,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "CBLD-9"
          , udn =  c("3.3.10.1", "3.3.10.2"), ms_d2 = "Other", name = "Other"
   ),
-  ##EG-c##
+  ##EG-c####
   ##Percent of people living on less than $1.90/day (all household types together)##
   tibble(ic = "EG-c"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
@@ -5878,7 +5897,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.7.2.2", "3.7.2.3", "3.7.2.4")
          , name = "Household Type: Disaggregates Not Available"
   ),
-  ##EG-d##
+  ##EG-d####
   ##Percent of People Living on <$1.90/Day in the Country (%)##
   tibble(ic = "EG-d", udn = "3.1"
          , name = "Percent of People Living on <$1.90/Day in the Country (%)"
@@ -5913,7 +5932,7 @@ d1 <-  dplyr::bind_rows(
          , udn =  c("3.2.5.1", "3.2.5.2")
          , name = "Household Type: Disaggregates Not Available"
   ),
-  ##EG-e##
+  ##EG-e####
   ##Percent of moderate and severe food insecurity (all household types together)##
   tibble(ic = "EG-e"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
@@ -5964,7 +5983,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.9.2.2", "3.9.2.3", "3.9.2.4")
          , name = "Household Type: Disaggregates Not Available"
   ),
-  ##EG-f##
+  ##EG-f####
   ##Percent of People with Moderate and Severe Food Insecurity (All Household Types Together) in the Country (%)##
   tibble(ic = "EG-f"
          , udn =  "3.1"
@@ -6006,7 +6025,7 @@ d1 <-  dplyr::bind_rows(
          , udn =  c("3.9.1", "3.9.2")
          , name = "Household Type: Disaggregates Not Available"
   ),
-  ##EG-g##
+  ##EG-g####
   ##Percent of Households Falling Below the Fixed Threshold for the Poorest Quintile of the Comparative Wealth Index (All Household Types Together)##
   tibble(ic = "EG-g"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
@@ -6043,7 +6062,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.7.2.2", "3.7.2.3", "3.7.2.4")
          , name = "Household Type: Disaggregates Not Available"
   ),
-  ##EG-h##
+  ##EG-h####
   ##Mean Percent Shortfall of the Poor (All Household Types Together)##
   tibble(ic = "EG-h"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
@@ -6080,13 +6099,13 @@ d1 <-  dplyr::bind_rows(
                     , "3.7.2.2", "3.7.2.3", "3.7.2.4")
          , name = "Household Type: Disaggregates Not Available"
   ),
-  ##EG.3-e (Percent Change)##
+  ##EG.3-e (Percent Change)####
   ##Total Value Added in the Agri-food Sector in USD##
   tibble(ic = "EG.3-e"
          , udn =  c("3.1.1.1", "3.1.1.2", "3.1.1.3", "3.1.1.4", "3.1.1.5")
          , name = "Total Value Added in the Agri-food Sector in USD"
   ),
-  ##EG.3-f (A-WEAI)##
+  ##EG.3-f (A-WEAI)####
   ##Sample-Weighted A-WEAI Score##
   tibble(ic = "EG.3-f"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
@@ -6142,13 +6161,13 @@ d1 <-  dplyr::bind_rows(
          , udn =  c("3.11.1", "3.11.2", "3.11.3", "3.11.4")
          , name = "Number of Primary Male 30+ Year Old Decision Makers Active in Household Agricultural Activities"
   ),
-  ##EG.3-g##
+  ##EG.3-g####
   ##Number of People Working in the Agri-food Sector Components##
   tibble(ic = "EG.3-g"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4", "3.1.5")
          , name = "Number of People Working in the Agri-food Sector Components"
   ),
-  ##EG.3-x1##
+  ##EG.3-x1####
   ##Gendered Household Type##
   tibble(ic = "EG.3-x1"
          , ms_d1 = "Gendered Household Type"
@@ -6160,10 +6179,10 @@ d1 <-  dplyr::bind_rows(
   ##Duration##
   tibble(ic = "EG.3-x1", ms_d1 = "Duration", name = "Duration"
   ),
-  ##EG.3-2##
+  ##EG.3-2####
   ##Sex##
   tibble(ic = "EG.3-2"
-         , udn =  c("3.1.2", "3.1.1", "3.1.3", "3.1.4")
+         , udn =  c("3.1.2", "3.1.1", "3.1.3", "3.1.4", "3.1.5")
          , ms_d1 = "Sex of individuals participating (no double counting)"
          , name = "Sex of Individuals Participating"
   ),
@@ -6181,10 +6200,10 @@ d1 <-  dplyr::bind_rows(
          , ms_d2 = "Type of individuals participating (double-counting allowed)"
          , name = "Type of Individuals Participating"
   ),
-  ##EG.3-2_OULevel##
+  ##EG.3-2_OULevel####
   ##Sex##
   tibble(ic = "EG.3-2_OULevel"
-         , udn =  c("3.1.2", "3.1.1", "3.1.3", "3.1.4")
+         , udn =  c("3.1.2", "3.1.1", "3.1.3", "3.1.4", "3.1.5")
          , name = "Sex of Individuals Participating"
   ),
   ##Age##
@@ -6199,7 +6218,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.3.13")
          , name = "Type of Individuals Participating"
   ),
-  ##EG.3-x6, -7, -8##
+  ##EG.3-x6, -7, -8####
   tibble(ic = "EG.3-x6, -7, -8"
          , ms_d2 = "Number of Direct Beneficiaries"
          , name = "Number of Direct Beneficiaries"
@@ -6229,7 +6248,7 @@ d1 <-  dplyr::bind_rows(
   ),
   tibble(ic = "EG.3-x9", ms_d1 = "Sex of job-holder", name = "Sex of Job-Holder"
   ),
-  ##EG.3-10-11-12##
+  ##EG.3-10-11-12####
   ##1##
   tibble(ic = "EG.3-10-11-12_CROP"
          , udn =  c("3.1.1.1.8.1.2", "3.1.1.1.9.1.2", "3.1.1.1.10.1.2"
@@ -6387,17 +6406,17 @@ d1 <-  dplyr::bind_rows(
                     , "3.1.1.4.8.2.3", "3.1.1.4.9.2.3", "3.1.1.4.10.2.3")
          , name = "Production System: Intensive/Commercial"
   ),
-  ##EG.3.1-c##
+  ##EG.3.1-c####
   ##Value of exports##
   tibble(ic = "EG.3.1-c", udn = c("3.1.1", "3.1.2"),  name = "Commodity"
   ),
   tibble(ic = "EG.3.1-c", udn = "3.1",  name = "Value of Exports (USD)"
   ),
-  ##EG.3.1-d##
+  ##EG.3.1-d####
   ##Milestone##
   tibble(ic = "EG.3.1-d", udn = "3.1.1", name = "Milestones Uploaded"
   ),
-  ##EG.3.1-1 (Kms)##
+  ##EG.3.1-1 (Kms)####
   ##Improved##
   tibble(ic = "EG.3.1-1", udn = "3.1", ms_d1 = "Improved", name = "Improved"
   ),
@@ -6408,17 +6427,17 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "EG.3.1-1", udn =  "3.3", ms_d1 = "Disaggregates Not Available"
          , name = "Disaggregates Not Available"
   ),
-  ##EG.3.1-x2##
+  ##EG.3.1-x2####
   tibble(ic = "EG.3.1-x2", name = "Number of Hectares"
   ),
-  ##EG.3.1-x12 (Policies)##
+  ##EG.3.1-x12 (Policies)####
   ##Policy Area##
   tibble(ic = "EG.3.1-x12", ms_d1 = "Policy Area", name = "Policy Area"
   ),
   ##Process/Step##
   tibble(ic = "EG.3.1-x12", ms_d1 = "Process/Step", name = "Process/Step"
   ),
-  ##EG.3.1-x13##
+  ##EG.3.1-x13####
   tibble(ic = "EG.3.1-x13", ms_d1 = "Female", name = "Female"
   ),
   tibble(ic = "EG.3.1-x13", ms_d1 = "Male", name = "Male"
@@ -6430,7 +6449,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "EG.3.1-x13", ms_d1 = "Disaggregates Not Available"
          , name = "Disaggregates Not Available"
   ),
-  ##EG.3.1-14##
+  ##EG.3.1-14####
   ##USG Commitment Amount##
   tibble(ic = "EG.3.1-14", udn =  "3.1.1", ms_d2 = "USG commitment amount ($USD)"
          , name = "USG Commitment Amount"
@@ -6440,36 +6459,36 @@ d1 <-  dplyr::bind_rows(
          , ms_d2 = "Private sector partner leveraged amount ($USD)"
          , name = "Private Sector Partner Leveraged Amount"
   ),
-  ##EG.3.1-15##
+  ##EG.3.1-15####
   ##Private Sector Partner Leveraged Amount##
   tibble(ic = "EG.3.1-15", udn = "3.1", name = "Private Sector Partner Leveraged Amount"
   ),
-  ##EG.3.1-x21##
+  ##EG.3.1-x21####
   tibble(ic = "EG.3.1-x21", name = "Number of Climate Vulnerability Assessments"
   ),
-  ##EG.3.1-x22 (Hectares)##
+  ##EG.3.1-x22 (Hectares)####
   tibble(ic = "EG.3.1-x22", name = "ms_d1"
   ),
-  ##EG.3.2-x1##
+  ##EG.3.2-x1####
   tibble(ic = "EG.3.2-x1", ms_d1 = "Type of Individual"
          , name = "ms_d2"
   ),
   tibble(ic = "EG.3.2-x1", ms_d1 = "Sex", name = "ms_d1"
   ),
-  ##EG.3.2-x3##
+  ##EG.3.2-x3####
   tibble(ic = "EG.3.2-x3", ms_d1 = "Sex of owner / producer"
          , name = "Sex of Owner/Producer"
   ),
   tibble(ic = "EG.3.2-x3", name = "ms_d1"
   ),
-  ##EG.3.2-x4##
+  ##EG.3.2-x4####
   tibble(ic = "EG.3.2-x4", ms_d1 = "Duration", name = "Duration"
   ),
   tibble(ic = "EG.3.2-x4"
          , ms_d1 = "Type of organization"
          , name = "Type of Organization"
   ),
-  ##EG.3.2-x5##
+  ##EG.3.2-x5####
   tibble(ic = "EG.3.2-x5"
          , ms_d2 = "Agricultural post harvest transformation"
          , name = "Agricultural Post Harvest Transformation"
@@ -6479,32 +6498,32 @@ d1 <-  dplyr::bind_rows(
   ),
   tibble(ic = "EG.3.2-x5", name = "ms_d2"
   ),
-  ##EG.3.2-x6##
+  ##EG.3.2-x6####
   tibble(ic = "EG.3.2-x6", ms_d1 = "Sex of recipient"
          , name = "Sex of Recipient(s)"
   ),
   tibble(ic = "EG.3.2-x6", ms_d1 = "Type of loan recipient"
          , name = "Type of Loan Recipient(s)"
   ),
-  ##EG.3.2-x14##
+  ##EG.3.2-x14####
   tibble(ic = "EG.3.2-x14"
          , name = "ms_d1"
   ),
-  ##EG.3.2-x17##
+  ##EG.3.2-x17####
   tibble(ic = "EG.3.2-x17", ms_d1 = "Producers", name = "Producers"
   ),
   tibble(ic = "EG.3.2-x17", ms_d1 = "Others", name = "Others"
   ),
-  ##EG.3.2-x18 (Hectares Under Improved Management)##
+  ##EG.3.2-x18 (Hectares Under Improved Management)####
   tibble(ic = "EG.3.2-x18", name = "Cultivated Land"
   ),
-  ##EG.3.2-x19 (Value by Type and Sex##
+  ##EG.3.2-x19 (Value by Type and Sex####
   tibble(ic = "EG.3.2-x19", name = "Commodity"
   ),
-  ##EG.3.2-x22 (PSI Value)##
+  ##EG.3.2-x22 (PSI Value)####
   tibble(ic = "EG.3.2-x22", name = "Value of New Private Sector Capital Investment"
   ),
-  ##EG.3.2-2##
+  ##EG.3.2-2####
   ##Sex##
   tibble(ic = "EG.3.2-2", udn =  c("3.1.2", "3.1.1", "3.1.3")
          , ms_d1 = "Sex", name = "Sex"
@@ -6513,7 +6532,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "EG.3.2-2", udn =  c("3.2.2", "3.2.1", "3.2.3")
          , ms_d1 = "Duration", name = "Duration"
   ),
-  ##EG.3.2-7##
+  ##EG.3.2-7####
   ##Plant and Animal Improvement Research##
   tibble(ic = "EG.3.2-7"
          , udn =  c("3.1.1", "3.1.5.1.1.1", "3.1.5.1.1.2", "3.1.5.1.1.3"
@@ -6557,7 +6576,7 @@ d1 <-  dplyr::bind_rows(
                      , "Disaggregates Not Available (research category not listed or unknown) - Unique number of technologies / practices")
          , name = "Disaggregates Not Available"
   ),
-  ##EG.3.2-24##
+  ##EG.3.2-24####
   ##Smallholder Producers##
   tibble(ic = "EG.3.2-24"
          , udn =  c("3.1.4", "3.1.1.1", "3.1.1.2", "3.1.1.3", "3.1.2.1"
@@ -6628,7 +6647,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d1 = "Value Chain Actor Type: Disaggregates Not Available"
          , name = "Disaggregates Not Available"
   ),
-  ##EG.3.2-25##
+  ##EG.3.2-25####
   ##Crop Land##
   tibble(ic = "EG.3.2-25"
          , udn =  c("3.1.1.1", "3.1.1.2", "3.1.1.3", "3.1.1.4", "3.1.2.1"
@@ -6699,7 +6718,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d1 = "Type of Hectare: Other"
          , name = "Other"
   ),
-  ##EG.3.2-26##
+  ##EG.3.2-26####
   ##(Type of Product) Inputs: Seeds and Planting Material##
   tibble(ic = "EG.3.2-26"
          , udn =  c("3.1.1.1.3.1", "3.1.1.1.3.3", "3.1.1.1.3.5", "3.1.1.1.3.7"
@@ -6980,7 +6999,7 @@ d1 <-  dplyr::bind_rows(
            , "Watermelon", "Wheat")
          , name = "Commodity"
   ),
-  ##EG.3.2-27##
+  ##EG.3.2-27####
   ##Total Value of Financing Received by Recipient Size, Sex, and Age##
   tibble(ic = "EG.3.2-27"
          , udn =  c("3.1.1.1", "3.1.1.2", "3.1.1.3", "3.1.1.4", "3.1.2.1"
@@ -7047,11 +7066,11 @@ d1 <-  dplyr::bind_rows(
          , ms_d1 = "Type of financing accessed: Non-Debt"
          , name = "Type of Financing Accessed: Non-Debt"
   ),
-  ##EG.3.2-28##
+  ##EG.3.2-28####
   tibble(ic = "EG.3.2-28"
          , name = "Number of Hectares Under Improved Management Practices or Technologies That Promote Improved Climate Risk Reduction and/or Natural Resources Management"
   ),
-  ##EG.3.3-10##
+  ##EG.3.3-10####
   ##Percentage of Female Participants Consuming a Diet of Minimum Diversity##
   tibble(ic = "EG.3.3-10"
          , udn =  c("3.1.1.1", "3.1.2.1", "3.1.3.1")
@@ -7064,7 +7083,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d3 = "Number of female participants of the nutrition-sensitive agriculture activity"
          , name = "Number of Female Participants of the Nutrition-Sensitive Agriculture Activity"
   ),
-  #EG.4.2-7##
+  ##EG.4.2-7####
   ##Sex##
   tibble(ic = "EG.4.2-7"
          , udn =  c("3.1.2", "3.1.1", "3.1.3")
@@ -7085,7 +7104,7 @@ d1 <-  dplyr::bind_rows(
          , udn =  c("3.4.1", "3.4.2", "3.4.3")
          , name = "Duration  (no double-counting)"
   ),
-  ##EG.10.4-7##
+  ##EG.10.4-7####
   ##Resource Type: Land##
   tibble(ic = "EG.10.4-7"
          , udn =  c("3.1.1.2", "3.1.1.1", "3.1.1.3", "3.1.2.1", "3.1.2.2"
@@ -7102,7 +7121,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d1 = "Resource Type: Marine"
          , name = "Resource Type: Marine"
   ),
-  ##EG.10.4-8##
+  ##EG.10.4-8####
   ##Resource Type: Land##
   tibble(ic = "EG.10.4-8"
          , udn =  c("3.1.1.1", "3.1.1.2", "3.1.1.3", "3.1.2.1", "3.1.2.2"
@@ -7117,7 +7136,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.2.2.8", "3.2.3.1", "3.2.3.2", "3.2.3.3")
          , ms_d1 = "Resource Type: Marine", name = "Resource Type: Marine"
   ),
-  ##ES.5-1##
+  ##ES.5-1####
   ##Sex##
   tibble(ic = "ES.5-1", udn =  c("3.1.2", "3.1.1", "3.1.3"), name = "Sex"
   ),
@@ -7133,7 +7152,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "ES.5-1", udn =  c("3.4.1", "3.4.2", "3.4.3", "3.4.4")
          , name = "Type of Asset Strengthened"
   ),
-  ##GNDR-2 (Number)##
+  ##GNDR-2 (Number)####
   ##Number of Female Program Participants##
   tibble(ic = "GNDR-2", udn =  "3.1"
          , ms_d1 = "Numerator: Number of female program participants"
@@ -7144,7 +7163,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d1 = "Denominator: Total number of male and female participants in the program"
          , name = "Number of Total Program Participants"
   ),
-  ## HL.8.2-2##
+  ## HL.8.2-2####
   ##Sex##
   tibble(ic = "HL.8.2-2", udn =  c("3.1.2", "3.1.1", "3.1.3"), name = "Sex"
   ),
@@ -7156,7 +7175,7 @@ d1 <-  dplyr::bind_rows(
          , udn =  c("3.3.1", "3.3.2", "3.3.3", "3.3.4", "3.3.5", "3.3.6")
          , name = "Wealth Quintile"
   ),
-  ##HL.8.2-5##
+  ##HL.8.2-5####
   ##Urban##
   tibble(ic = "HL.8.2-5", udn =  c("3.2.1.1", "3.2.1.2")
          , ms_d2 = "Urban - percentage of households with soap and water at a handwashing station"
@@ -7172,7 +7191,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d2 = "Disaggregates Not Available (for Residence Location) - percentage of households with soap and water at a handwashing station"
          , name = "Disaggregates Not Available"
   ),
-  ##HL.9-1##
+  ##HL.9-1####
   ##Sex##
   tibble(ic = "HL.9-1", udn =  c("3.1.2", "3.1.1", "3.1.3")
          , ms_d1 = "Sex (no double-counting allowed)", name = "Sex"
@@ -7183,7 +7202,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d1 = "Intervention (double-counting allowed)"
          , name = "Intervention (Double-Counting Allowed)"
   ),
-  ##HL.9-2 (Participants by Sex)##
+  ##HL.9-2 (Participants by Sex)####
   ##Female##
   tibble(ic = "HL.9-2", udn = "3.2", name = "Female"
   ),
@@ -7196,7 +7215,7 @@ d1 <-  dplyr::bind_rows(
   ##FTFMS##
   tibble(ic = "HL.9-2", name = "ms_d1"
   ),
-  ##HL.9-3##
+  ##HL.9-3####
   ##Women < 19##
   tibble(ic = "HL.9-3", udn =  c("3.1.1", "3.1.2", "3.1.3")
          , ms_d1 = "Age (no double counting)", name = "Age"
@@ -7207,7 +7226,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d1 = "Intervention (double-counting allowed)"
          , name = "Intervention (Double-Counting Allowed)"
   ),
-  ##HL.9-4##
+  ##HL.9-4####
   ##Sex##
   tibble(ic = "HL.9-4", udn =  c("3.1.2", "3.1.1", "3.1.3"), ms_d1 = "Sex"
          , name = "Sex"
@@ -7216,7 +7235,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "HL.9-4", udn =  c("3.2.1", "3.2.2", "3.2.3", "3.2.4", "3.2.5")
          , ms_d1 = "Type of Training", name = "Type of Training"
   ),
-  ##HL.9-a##
+  ##HL.9-a####
   ##Children 0-59##
   tibble(ic = "HL.9-a"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4", "3.2.1", "3.2.2"
@@ -7240,7 +7259,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.6.3", "3.6.4")
          , name = "Children 24-59 Months of Age"
   ),
-  ##HL.9-b##
+  ##HL.9-b####
   ##Children 0-59##
   tibble(ic = "HL.9-b"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4", "3.2.1", "3.2.2"
@@ -7264,7 +7283,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.6.3", "3.6.4")
          , name = "Children 24-59 Months of Age"
   ),
-  ##HL.9-d##
+  ##HL.9-d####
   ##Percent of Non-Pregnant Women 15-49 Years of Age That Is Underweight##
   tibble(ic = "HL.9-d"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
@@ -7291,7 +7310,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "HL.9-d", udn =  c("3.6.1", "3.6.2", "3.6.3", "3.6.4")
          , name = "Number of Non-Pregnant Women 19-49 Years of Age"
   ),
-  ##HL.9-h##
+  ##HL.9-h####
   ##Age Group##
   tibble(ic = "HL.9-h"
          , udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4", "3.1.5", "3.1.6"
@@ -7303,7 +7322,7 @@ d1 <-  dplyr::bind_rows(
          , udn =  c("3.2.1", "3.2.2", "3.2.3", "3.2.4", "3.2.5", "3.2.6")
          , name = "Sex"
   ),
-  ##HL.9.1-a##,
+  ##HL.9.1-a####
   ##Percent of Children 6-23 Months of Age Receiving a Minimum Acceptable Diet##
   tibble(ic = "HL.9.1-a", udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
          , name = "Percent of Children 6-23 Months of Age Receiving a Minimum Acceptable Diet"
@@ -7336,7 +7355,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "HL.9.1-a", udn =  c("3.5.2.1", "3.5.2.2", "3.5.2.3", "3.5.2.4")
          , name = "Number of Children Whose Sex Disaggregation is Not Available 6-23 Months of Age"
   ),
-  ##HL.9.1-b##
+  ##HL.9.1-b####
   ##Percent of Children 0-5 Months of Age in Sample Who Are Exclusively Breast Fed##
   tibble(ic = "HL.9.1-b", udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
          , name = "Percent of Children 0-5 Months of Age in Sample Who Are Exclusively Breast Fed"
@@ -7369,7 +7388,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "HL.9.1-b", udn =  c("3.5.2.1", "3.5.2.2", "3.5.2.3", "3.5.2.4")
          , name = "Number of Children Whose Sex Disaggregation is Not Available 0-5 Months of Age"
   ),
-  ##HL.9.1-d##
+  ##HL.9.1-d####
   ##Percent of Women 15-49 Years Who Consumed a Diet of Minimum Diversity in the Previous 24 Hours##
   tibble(ic = "HL.9.1-d", udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
          , name = "Percent of Women 15-49 Years Who Consumed a Diet of Minimum Diversity in the Previous 24 Hours"
@@ -7394,7 +7413,7 @@ d1 <-  dplyr::bind_rows(
   tibble(ic = "HL.9.1-d", udn =  c("3.6.1", "3.6.2", "3.6.3", "3.6.4")
          , name = "Number of Women 19-49 Years of Age"
   ),
-  ##RESIL-1 (Number of Plans by Type -  Double Counting)##
+  ##RESIL-1 (Number of Plans by Type -  Double Counting)####
   ##Government##
   tibble(ic = "RESIL-1", udn = "3.1.1", name = "Government - Number of Plans"
   ),
@@ -7421,7 +7440,7 @@ d1 <-  dplyr::bind_rows(
          , ms_d3 = "Phase of development (double-counting allowed)"
          , name = "Phase of Development"
   ),
-  ##RESIL-a##
+  ##RESIL-a####
   ##ARSSI Score##
   tibble(ic = "RESIL-a", udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
          , name = "ARSSI Score"
@@ -7460,7 +7479,7 @@ d1 <-  dplyr::bind_rows(
                     , "3.7.2.2", "3.7.2.3", "3.7.2.4")
          , name = "Household Type: Disaggregates Not Available"
   ),
-  ##RESIL-b##
+  ##RESIL-b####
   ##Overall Index of Social Capital at the Household Level##
   tibble(ic = "RESIL-b", udn =  c("3.1.1", "3.1.2", "3.1.3", "3.1.4")
          , name = "Overall Index of Social Capital at the Household Level"
@@ -7505,11 +7524,11 @@ d1 <-  dplyr::bind_rows(
                     , "3.8.3.3", "3.8.3.4")
          , name = "Household Type: Child No Adults (CNA)"
   ),
-  ##STIR-12 (Number of Publications)##
+  ##STIR-12 (Number of Publications)####
   tibble(ic = "STIR-12", udn =  c("3.1.1", "3.1.2")
          , name = "Number of Peer-Reviewed Scientific Publications Resulting From USG Support to Research and Implementation Programs"
   ),
-  ##Youth-3 (Number by Age)##
+  ##Youth-3 (Number by Age)####
   ##Number of Youth Program Participants##
   tibble(ic = "Youth-3", udn =  "3.1"
          , ms_d1 = "Numerator: Number of youth program participants"
@@ -7523,7 +7542,6 @@ d1 <-  dplyr::bind_rows(
 
 )
 
-
 # Combine ####
 ## DIS ####
 disaggregate_crosswalk <-  dplyr::bind_rows(
@@ -7533,19 +7551,26 @@ disaggregate_crosswalk <-  dplyr::bind_rows(
   ,  dplyr::mutate(d4, order = "d4")
   ) %>%
   dplyr::select(ic, udn, name, order) %>%
-  dplyr::filter(!is.na(udn))%>%
+  dplyr::filter(!is.na(udn)) %>%
   # dplyr::group_by(ic, udn, order) %>%
   # dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
   # dplyr::filter(n > 1L)
   tidyr::pivot_wider(id_cols = c(ic, udn)
                      , names_from = order
                      , values_from = name) %>%
-  mutate(is_indicator_total = case_when(
-    ic == "EG.3.2-26" & d3 == "Sex" & str_detect(d4, "Value") ~ TRUE
-    ,
-  ))
+  dplyr::mutate(unit = reclassify_unit(ic, d1, d2, d3, d4)
+                , typeof = reclassify_type(ic, d1, d2, d3, d4)
+                # , uid = make_uid(uic, unit, typeof)
+                , disag1 = reclassify_disag1(ic, d1, d2, d3, d4)
+                , disag2 = reclassify_disag2(ic, d1, d2, d3, d4, typeof)
+                , disag3 = reclassify_disag3(ic, d1, d2, d3, d4)
+                , disag4 = reclassify_disag4(ic, d1, d2, d3, d4))
 
 return(disaggregate_crosswalk)
 
 }
+
+
+
+
 
