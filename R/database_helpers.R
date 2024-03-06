@@ -10,7 +10,7 @@ return_id <- function(row) {
 
 # reclassify disaggregates
 #' @export reclassify_disag1
-reclassify_disag1 <- function(uic, ic, d1, d2 , d3, d4) {
+reclassify_disag1 <- function(ic, d1, d2 , d3, d4) {
   dplyr::case_when(
     # headcount
     # ic %in% c("eg.3-2", "eg.3-2_oulevel") ~ d1 # this is the default
@@ -23,7 +23,7 @@ reclassify_disag1 <- function(uic, ic, d1, d2 , d3, d4) {
     , ic == "eg.3.2-26" ~ d3
     # , ic == "eg.3.2-x19" ~ d1
     # financing
-    , ic == "eg.3.2-27" ~ d3
+    , ic == "eg.3.2-27" ~ d2
     # , ic == "eg.3.2-x6" ~ d1
     # assuming below the "sex of recipient(s)" has already been replaced with "sex"
     # , ic == "eg.3.2-x6" ~ d1
@@ -35,6 +35,8 @@ reclassify_disag1 <- function(uic, ic, d1, d2 , d3, d4) {
     , ic == "eg.10.4-8" & d2 != "tenure type" ~ d2
     , ic == "eg.11-x6" ~ "sex"
     , ic == "hl.8.2-5" ~ "location"
+    , ic == "hl.9-a" ~ "age"
+    , ic == "hl.9-b" ~ "age"
     , ic == "hl.9-2" ~ "sex"
     , ic == "hl.9-3" & d1 == "age" ~ d1
     , ic == "hl.9.3" & d1 != "age" ~ NA
@@ -49,7 +51,7 @@ reclassify_disag1 <- function(uic, ic, d1, d2 , d3, d4) {
 
 # headcount_types <- c("producer", "organization participant", "household")
 #' @export reclassify_disag2
-reclassify_disag2 <- function(uic, ic, d1, d2, d3, d4, typeof) {
+reclassify_disag2 <- function(ic, d1, d2, d3, d4, typeof) {
   dplyr::case_when(
     # headcount
     ic %in% c("eg.3-2", "eg.3-2_oulevel") ~ stringr::str_replace_all(
@@ -57,20 +59,22 @@ reclassify_disag2 <- function(uic, ic, d1, d2, d3, d4, typeof) {
                       , "people in " = ""
                       , "producer: " = ""
                       , "type of individual " = ""))
-    , uic %in% c("eg.3-2", "eg.3-2_oulevel") & d1 == "sex" ~ d2
+    , ic %in% c("eg.3-2", "eg.3-2_oulevel") & d1 == "sex" ~ d2
 
     # producers
-    , uic == "eg.3.2-24/eg.3.2-x17"  ~ d3
+    , ic %in% c("eg.3.2-24", "eg.3.2-x17")  ~ d3
     # hectares
-    , ic == "eg.3.2-25/eg.3.2-x18"  ~ d3
+    , ic %in% c("eg.3.2-25", "eg.3.2-x18")  ~ d3
     # sales
-    , uic == "eg.3.2-26/eg.3.2-x19" ~ sub(" -.*", "", d4)
+    , ic %in% c("eg.3.2-26", "eg.3.2-x19") ~ sub(" -.*", "", d4)
     # financing
     # , ic == "eg.3.2-x6" ~ d2
     , ic == "eg.3.2-27" ~ d4
     , ic == "eg.3.2-x32" ~ d1
     , ic == "eg.11-x6" ~ d2
     , ic == "hl.8.2-5" ~ d1
+    , ic == "hl.9-a" ~ d1
+    , ic == "hl.9-b" ~ d1
     , ic == "hl.9-2" ~ d1
     , ic == "hl.9-x1" | ic == "hl.9-x15" ~ d2
     , .default = d2
@@ -78,7 +82,7 @@ reclassify_disag2 <- function(uic, ic, d1, d2, d3, d4, typeof) {
 }
 
 #' @export reclassify_disag3
-reclassify_disag3 <- function(uic, ic, d1, d2, d3, d4) {
+reclassify_disag3 <- function(ic, d1, d2, d3, d4) {
   dplyr::case_when(
     # producers
     ic == "eg.3.2-24"  ~ d1
@@ -106,6 +110,100 @@ reclassify_disag4 <- function(ic, d1, d2, d3, d4) {
   )
 }
 
+#' @export add_disaggregate_categories
+add_disaggregate_categories <- function(x) {
+  x %>%
+    dplyr::mutate(indicator_code = ic, first_order = d1, second_order = d2, third_order = d3, fourth_order = d4) %>%
+    dplyr::mutate(
+      across(
+        c(ic, d1, d2, d3, d4)
+        , ~ stringr::str_trim(.) %>%
+          stringr::str_to_lower() %>%
+          stringr::str_replace_all(disags_replace_all)
+        )
+      ) %>%
+    dplyr::mutate(unit = reclassify_unit(ic, d1, d2, d3, d4)
+                  , typeof = reclassify_type(ic, d1, d2, d3, d4)
+                  # , uid = make_uid(uic, unit, typeof)
+                  , disag1 = reclassify_disag1(ic, d1, d2, d3, d4)
+                  , disag2 = reclassify_disag2(ic, d1, d2, d3, d4, typeof)
+                  , disag3 = reclassify_disag3(ic, d1, d2, d3, d4)
+                  , disag4 = reclassify_disag4(ic, d1, d2, d3, d4)
+                  , .after = everything()) %>%
+    #### sexes ####
+  mutate(
+    sex = dplyr::case_when(
+      d1 == "sex"  ~ d2
+      , d2 == "sex"  ~ d3
+      , d3 == "sex"  ~ d4)      #### ages ####
+    , age = dplyr::case_when(
+      d1 == "age"  ~ d2
+      , d2 == "age"  ~ d3
+      , d3 == "age"  ~ d4)
+    #### sizes ####
+    , size = dplyr::case_when(
+      ic == "eg.3.2-24" & d1 == "non-smallholder producers" ~ "non-smallholder"
+      , ic == "eg.3.2-24" & d1 == "smallholder producers" ~ "smallholder"
+      , ic == "eg.3.2-x17" & d1 == "smallholder producers" ~ "smallholder"
+      , ic == "eg.3.2-x17" & d1 == "non-smallholder producers" ~ "non-smallholder"
+      , ic == "eg.3.2-26" ~ sub(" (row label implied)", "", sub(".* - ", "", d2))
+      , ic == "eg.3.2-27" & d3 == "size" ~ d4
+      , stringr::str_detect(ic, "eg.3-2") &
+        d2 %in% c("producer: non-smallholder farmer", "producer: smallholder farmer"
+                  , "producer: size disaggregate not available") ~ d2
+      , stringr::str_detect(ic, "eg.3-2") &
+        ! d2 %in% c("producer: non-smallholder farmer", "producer: smallholder farmer"
+                    , "producer: size disaggregate not available") ~ NA)
+
+    #### mgmt_practices ####
+    , mgmt_practice = dplyr::case_when(
+      disag1 == "management practice or tech type" &
+        disag2 %in% cat_lookup$disaggregate[cat_lookup$standard == "mgmt_practice"] ~ disag2)
+
+    #### items ####
+    , item = dplyr::case_when(
+      ic == "eg.3.2-26" ~ sub(".*: ", "", d1)
+      , disag1 == "commodity" & disag2 %in% cat_lookup$disaggregate[cat_lookup$standard == "commodity"] ~ disag2
+      , ic == "eg.3.2-x23" ~ d2
+      , ic == "eg.3.3-x11" ~ d2
+      , ic == "eg.3.3-x11" ~ d2)
+
+    #### phase ####
+    , phase = dplyr::case_when(
+      (ic == "eg.3-x1" | ic == "eg.3-x9" | ic == "eg.5.2-x1") & d1 == "duration" ~ d2
+      , ic == "es.5-1" & stringr::str_detect(d1, "duration") ~ d2
+      , ic == "hl.9-4" & stringr::str_detect(disag2, "^degree") ~ sub(".*: ", "", disag2)
+      , ic == "resil-1" & stringr::str_detect(disag2, "total", negate = TRUE) ~ disag2)
+
+    #### location ####
+    , location = dplyr::case_when(
+      (ic == "eg.3-x1" | ic == "eg.3-x9") & d1 == "location" ~ d2
+      , ic == "eg.10.4-7" & d2 == "location" ~ d3
+      , ic == "hl.8.2-2" & d1 == "location" ~ d2
+      , ic == "hl.8.2-5" ~ d1)
+
+    #### outcomes_output ####
+    , outcome_output = dplyr::case_when(
+      ic == "cbld-9" & stringr::str_detect(d2, "improved performance") ~ "improved performance"
+      , ic == "cbld-9" & stringr::str_detect(d2, "capacity development support") ~ "capacity development support"
+      , ic == "eg.3.2-x41" ~ d2
+      , (ic == "eg.10.4-7" | ic == "eg.10.4-8") & stringr::str_detect(d2, "type") ~ d3
+      , ic == "es.5-1" & stringr::str_detect(d1, "type") ~ d2
+      , ic == "hl.9-1" & stringr::str_detect(d1, "intervention") ~ d2)
+    , .after = everything()) %>%
+
+    #### total ####
+  # , is_total = dplyr::case_when(
+  #   # This is not correct. Need to add logical for "value" for eg.3.2-26, among others.
+  #   !is.na(sex) ~ TRUE
+  #   , is.na(sex) & !is.na(age) ~ TRUE
+  #   , is.na(sex) & is.na(age) ~ TRUE
+  # )
+  # , .after = disag4) %>%
+
+  relocate(d1, d2, d3, d4, .after = sex)
+}
+
 
 # REOGRANIZATION FUNCTIONS ####
 # reclassify disaggregates
@@ -128,18 +226,18 @@ reclassify_disag4 <- function(ic, d1, d2, d3, d4) {
 
 
 #' @export reclassify_unit
-reclassify_unit <- function(uic, ic, d1, d2, d3, d4) {
+reclassify_unit <- function(ic, d1, d2, d3, d4) {
   dplyr::case_when(
     ################### producers and participants are all people
-    uic == "eg.3.2-24/eg.3.2-x17" | uic == "eg.3-2" | uic == "eg.3-2_oulevel" ~ "people"
+    ic == "eg.3.2-24" | ic == "eg.3.2-x17" | ic == "eg.3-2" | ic == "eg.3-2_oulevel" ~ "people"
 
     ################### hectares
-    , uic == "eg.3.2-25/eg.3.2-x18" ~ "area"
+    , ic == "eg.3.2-25" | ic == "eg.3.2-x18" ~ "area"
 
     ################### sales
-    , uic == "eg.3.2-26/eg.3.2-x19" & stringr::str_detect(d4, "value") ~ "dollars"
-    , uic == "eg.3.2-26/eg.3.2-x19" & stringr::str_detect(d4, "number") ~ "people"
-    , uic == "eg.3.2-26/eg.3.2-x19" & stringr::str_detect(d4, "volume") ~ "metric tons"
+    , (ic == "eg.3.2-26"| ic == "eg.3.2-x19") & stringr::str_detect(d4, "value") ~ "dollars"
+    , (ic == "eg.3.2-26" | ic == "eg.3.2-x19") & stringr::str_detect(d4, "number") ~ "people"
+    , (ic == "eg.3.2-26" | ic == "eg.3.2-x19") & stringr::str_detect(d4, "volume") ~ "metric tons"
 
     ################### financing
     , ic == "eg.3.2-27" & stringr::str_detect(d2, "value") ~ "dollars"
@@ -173,7 +271,7 @@ reclassify_unit <- function(uic, ic, d1, d2, d3, d4) {
 household_types <- c("school-aged children", "household members",
                      "parents/caregivers")
 #' @export reclassify_type
-reclassify_type <- function(uic, ic, d1, d2, d3, d4) {
+reclassify_type <- function(ic, d1, d2, d3, d4) {
   dplyr::case_when(
     # headcount
     stringr::str_starts(d1, "type of") ~ sub("type of ", "", d1)
@@ -184,28 +282,28 @@ reclassify_type <- function(uic, ic, d1, d2, d3, d4) {
     #    d2 == "type of individual disaggregates not available" ~ "disaggregates not available"
     # , uic %in% c("eg.3-2", "eg.3-2_oulevel") &
     #    d2 == "type of individual not applicable" ~ "not applicable"
-    , uic %in% c("eg.3-2", "eg.3-2_oulevel") & stringr::str_starts(d2, "producer") ~ "producer"
-    , uic %in% c("eg.3-2", "eg.3-2_oulevel") & stringr::str_starts(d2, "laborer") ~ "laborer"
-    , uic %in% c("eg.3-2", "eg.3-2_oulevel") & d2 %in% household_types ~ "household member"
+    , ic %in% c("eg.3-2", "eg.3-2_oulevel") & stringr::str_starts(d2, "producer") ~ "producer"
+    , ic %in% c("eg.3-2", "eg.3-2_oulevel") & stringr::str_starts(d2, "laborer") ~ "laborer"
+    , ic %in% c("eg.3-2", "eg.3-2_oulevel") & d2 %in% household_types ~ "household member"
     , ic == "eg.3-x1" & stringr::str_detect(d1, "type") ~ sub(": .*", "", d2)
 
     # producers
-    , uic == "eg.3.2-24/eg.3.2-x17" & stringr::str_detect("producer", d1) ~ "producer"
-    , uic == "eg.3.2-24/eg.3.2-x17" & stringr::str_detect("producer", d1, negate=TRUE) ~ d1
+    , ic %in% c("eg.3.2-24", "eg.3.2-x17") & stringr::str_detect("producer", d1) ~ "producer"
+    , ic %in% c("eg.3.2-24", "eg.3.2-x17") & stringr::str_detect("producer", d1, negate=TRUE) ~ d1
 
     # hectares
-    , uic == "eg.3.2-25/eg.3.2-x18" ~ d1
+    , ic %in% c("eg.3.2-25", "eg.3.2-x18") ~ d1
 
     # sales
-    , uic == "eg.3.2-26/eg.3.2-x19" &
+    , ic %in% c("eg.3.2-26", "eg.3.2-x19") &
       stringr::str_detect(d1, "type of product") &
       stringr::str_detect(d4, "number") ~ "producer"
-    , uic == "eg.3.2-26/eg.3.2-x19" &
+    , ic  %in% c("eg.3.2-26", "eg.3.2-x19") &
       stringr::str_detect(d1, "type of service") &
       stringr::str_detect(d4, "number") ~ "service provider"
-    , uic == "eg.3.2-26/eg.3.2-x19" &
+    , ic  %in% c("eg.3.2-26", "eg.3.2-x19") &
       stringr::str_detect(d1, "type of product") ~ "product"
-    , uic == "eg.3.2-26/eg.3.2-x19" &
+    , ic  %in% c("eg.3.2-26", "eg.3.2-x19") &
       stringr::str_detect(d1, "type of service") &
       stringr::str_detect(d4, "number", negate = TRUE) ~ "service"
     # , uic == "eg.3.2-26/eg.3.2-x19" &
@@ -222,7 +320,7 @@ reclassify_type <- function(uic, ic, d1, d2, d3, d4) {
       ! stringr::str_detect(d2, "producers") ~  d2
 
     # other indicators
-    , uic == "cbld-9" | uic == "eg.3.1-1" ~ d1
+    , ic  %in% c("cbld-9", "eg.3.1-1") ~ d1
     , ic == "eg.3.1-14/-15" ~ sub(" amount", "", d1)
     , ic == "eg.3.2-x22" ~ "capital investment"
     , ic == "eg.3.3-10" & stringr::str_detect(d1, "number") ~ "participants"
@@ -245,55 +343,56 @@ reclassify_type <- function(uic, ic, d1, d2, d3, d4) {
   )
 }
 
-#' @export make_uid
-make_uid <- function(uic, unit, typeof) {
-  ifelse(is.na(unit) & is.na(typeof), uic
-  , ifelse(!is.na(unit) & is.na(typeof), paste0(uic, "_", unit)
-  , ifelse(is.na(unit) & !is.na(typeof), paste0(uic, "_", typeof)
-  , ifelse(!is.na(unit) & !is.na(typeof), paste0(uic, "_", unit, "_", typeof)
-  , NA))))
-}
+# @export make_uid
+#' Should not have a function with uic in it.
+# make_uid <- function(uic, unit, typeof) {
+#   ifelse(is.na(unit) & is.na(typeof), uic
+#   , ifelse(!is.na(unit) & is.na(typeof), paste0(uic, "_", unit)
+#   , ifelse(is.na(unit) & !is.na(typeof), paste0(uic, "_", typeof)
+#   , ifelse(!is.na(unit) & !is.na(typeof), paste0(uic, "_", unit, "_", typeof)
+#   , NA))))
+# }
 
 # this uses the green row from Magnus's Tableau worksheet
-parse_uic <- function(ic, udn, d1) {
-  warning("make_dis_uic() can only be applied after combining ftfms and DIS data")
-  dplyr::case_when(
-    ic == "eg.3.1-14/-15" & udn == "3.1.2" ~ "eg.3.1-14/-15/eg.3.2-x22" # Private Sector Partner Leveraged Amount
-    , ic == "eg.3.1-14/-15" & d1 == "private sector partner leveraged amount" ~ "eg.3.1-14/-15/eg.3.2-x22"
-
-    , ic == "eg.3.2-x22" ~ "eg.3.1-14/-15/eg.3.2-x22"
-
-    , ic == "eg.3.2-x17" & d1 == "producers" ~ "eg.3.2-24/eg.3.2-x17"
-    , ic == "eg.3.2-24" &
-      udn %in% c("3.1.1.1", "3.1.1.2", "3.1.1.3","3.1.1.4", "3.2.1.1"
-                 , "3.2.1.2", "3.2.1.3", "3.2.1.4") ~ "eg.3.2-24/eg.3.2-x17"
-
-    , ic == "eg.3.2-25" &
-      d1 %in% c("type of hectare: crop land"
-                , "type of hectare: cultivated pasture") ~ "eg.3.2-25/eg.3.2-x18"
-    , ic == "eg.3.2-25" &
-      udn %in% c("3.1.1.1",  "3.1.1.2", "3.1.1.3", "3.1.1.4","3.1.1.5", "3.2.1.1"
-                 , "3.2.1.2", "3.2.1.3", "3.2.1.4", "3.2.1.5") ~ "eg.3.2-25/eg.3.2-x18"
-    , ic == "eg.3.2-x18" ~ "eg.3.2-25/eg.3.2-x18"
-
-    , ic == "e.g.3.2-26" &
-      udn %in% c("3.1.1.1.3.1", "3.1.1.1.3.3", "3.1.1.1.3.5",
-                 "3.1.1.1.3.7", "3.1.1.1.3.2", "3.1.1.1.3.4", "3.1.1.1.3.6", "3.1.1.1.3.8",
-                 "3.1.2.1.3.1", "3.1.2.1.3.3", "3.1.2.1.3.5", "3.1.2.1.3.7", "3.1.2.1.3.2",
-                 "3.1.2.1.3.4", "3.1.2.1.3.6", "3.1.2.1.3.8", "3.1.3.1.3.1", "3.1.3.1.3.3",
-                 "3.1.3.1.3.5", "3.1.3.1.3.7", "3.1.3.1.3.2", "3.1.3.1.3.4", "3.1.3.1.3.6",
-                 "3.1.3.1.3.8", "3.1.4.1.3.1", "3.1.4.1.3.3", "3.1.4.1.3.5", "3.1.4.1.3.7",
-                 "3.1.4.1.3.2", "3.1.4.1.3.4", "3.1.4.1.3.6", "3.1.4.1.3.8", "3.1.5.1.3.1",
-                 "3.1.5.1.3.3", "3.1.5.1.3.5", "3.1.5.1.3.7", "3.1.5.1.3.2", "3.1.5.1.3.4",
-                 "3.1.5.1.3.6", "3.1.5.1.3.8", "3.1.6.1.3.1", "3.1.6.1.3.3", "3.1.6.1.3.5",
-                 "3.1.6.1.3.7", "3.1.6.1.3.2", "3.1.6.1.3.4", "3.1.6.1.3.6", "3.1.6.1.3.8",
-                 "3.3.1.4.1", "3.3.1.4.4", "3.3.1.4.7", "3.3.1.4.10", "3.3.1.4.3",
-                 "3.3.1.4.6", "3.3.1.4.9", "3.3.1.4.12", "3.3.1.4.2", "3.3.1.4.5",
-                 "3.3.1.4.8", "3.3.1.4.11") ~ "eg.3.2-26/eg.3.2-x19"
-    , ic == "eg.3.2-x19" ~ "eg.3.2-26/eg.3.2-x19"
-    , ic %in% c("eg.3.2-27","eg.3.2-x6") ~ "eg.3.2-27/eg.3.2-x6"
-    , .default = ic)
-}
+# parse_uic <- function(ic, udn, d1) {
+#   warning("make_dis_uic() can only be applied after combining ftfms and DIS data")
+#   dplyr::case_when(
+#     ic == "eg.3.1-14/-15" & udn == "3.1.2" ~ "eg.3.1-14/-15/eg.3.2-x22" # Private Sector Partner Leveraged Amount
+#     , ic == "eg.3.1-14/-15" & d1 == "private sector partner leveraged amount" ~ "eg.3.1-14/-15/eg.3.2-x22"
+#
+#     , ic == "eg.3.2-x22" ~ "eg.3.1-14/-15/eg.3.2-x22"
+#
+#     , ic == "eg.3.2-x17" & d1 == "producers" ~ "eg.3.2-24/eg.3.2-x17"
+#     , ic == "eg.3.2-24" &
+#       udn %in% c("3.1.1.1", "3.1.1.2", "3.1.1.3","3.1.1.4", "3.2.1.1"
+#                  , "3.2.1.2", "3.2.1.3", "3.2.1.4") ~ "eg.3.2-24/eg.3.2-x17"
+#
+#     , ic == "eg.3.2-25" &
+#       d1 %in% c("type of hectare: crop land"
+#                 , "type of hectare: cultivated pasture") ~ "eg.3.2-25/eg.3.2-x18"
+#     , ic == "eg.3.2-25" &
+#       udn %in% c("3.1.1.1",  "3.1.1.2", "3.1.1.3", "3.1.1.4","3.1.1.5", "3.2.1.1"
+#                  , "3.2.1.2", "3.2.1.3", "3.2.1.4", "3.2.1.5") ~ "eg.3.2-25/eg.3.2-x18"
+#     , ic == "eg.3.2-x18" ~ "eg.3.2-25/eg.3.2-x18"
+#
+#     , ic == "e.g.3.2-26" &
+#       udn %in% c("3.1.1.1.3.1", "3.1.1.1.3.3", "3.1.1.1.3.5",
+#                  "3.1.1.1.3.7", "3.1.1.1.3.2", "3.1.1.1.3.4", "3.1.1.1.3.6", "3.1.1.1.3.8",
+#                  "3.1.2.1.3.1", "3.1.2.1.3.3", "3.1.2.1.3.5", "3.1.2.1.3.7", "3.1.2.1.3.2",
+#                  "3.1.2.1.3.4", "3.1.2.1.3.6", "3.1.2.1.3.8", "3.1.3.1.3.1", "3.1.3.1.3.3",
+#                  "3.1.3.1.3.5", "3.1.3.1.3.7", "3.1.3.1.3.2", "3.1.3.1.3.4", "3.1.3.1.3.6",
+#                  "3.1.3.1.3.8", "3.1.4.1.3.1", "3.1.4.1.3.3", "3.1.4.1.3.5", "3.1.4.1.3.7",
+#                  "3.1.4.1.3.2", "3.1.4.1.3.4", "3.1.4.1.3.6", "3.1.4.1.3.8", "3.1.5.1.3.1",
+#                  "3.1.5.1.3.3", "3.1.5.1.3.5", "3.1.5.1.3.7", "3.1.5.1.3.2", "3.1.5.1.3.4",
+#                  "3.1.5.1.3.6", "3.1.5.1.3.8", "3.1.6.1.3.1", "3.1.6.1.3.3", "3.1.6.1.3.5",
+#                  "3.1.6.1.3.7", "3.1.6.1.3.2", "3.1.6.1.3.4", "3.1.6.1.3.6", "3.1.6.1.3.8",
+#                  "3.3.1.4.1", "3.3.1.4.4", "3.3.1.4.7", "3.3.1.4.10", "3.3.1.4.3",
+#                  "3.3.1.4.6", "3.3.1.4.9", "3.3.1.4.12", "3.3.1.4.2", "3.3.1.4.5",
+#                  "3.3.1.4.8", "3.3.1.4.11") ~ "eg.3.2-26/eg.3.2-x19"
+#     , ic == "eg.3.2-x19" ~ "eg.3.2-26/eg.3.2-x19"
+#     , ic %in% c("eg.3.2-27","eg.3.2-x6") ~ "eg.3.2-27/eg.3.2-x6"
+#     , .default = ic)
+# }
 
 #' @export make_uic
 make_uic <- function(ic, d1, d2) {
@@ -355,7 +454,6 @@ parse_ftfms_uic <- function(ic, d1) {
 
 # STANDARDIZE DISAGREGATES ####
 # This is a list of all the sex disaggregates for sex grouped by the label field
-#' @export cat_lookup
 cat_lookup <- bind_rows(
   tibble(standard = "sex"
          , category = c("sex")
@@ -416,7 +514,7 @@ cat_lookup <- bind_rows(
                           , "mixed ages (for enterprises)")
   ),
   tibble(standard = "age"
-         , category = c("age"),
+         , category = "age",
          disaggregate = c("women < 19", "women >= 19",
                           "disaggregates not available", "15-29", "30+"
                           , "disaggregates not available - value of sales"
@@ -441,6 +539,9 @@ cat_lookup <- bind_rows(
          , category = c("age of participant (no double-counting)"),
          disaggregate = c("15-29", "30+",
                           "disaggregates not available")
+  ),
+  tibble(standard = "age"
+         , category = "age group"
   ),
   # a5 <- tibble(category = c(
   #   rep("number of female participants of the nutrition-sensitive agriculture activity", 2),
