@@ -7,7 +7,8 @@
 make_database(
   input_dir = "../../indicators/basic",
   output_dir = "../data/",
-  version = "relational"
+  format = c("relational", "tidy"),
+  version = Sys.Date()
 )
 }
 \arguments{
@@ -15,7 +16,9 @@ make_database(
 
 \item{output_dir}{character. The directory where you want to store the output files.}
 
-\item{version}{character. One of c("relational", "tidy") to specify the format of the data. The default is "relational".}
+\item{format}{character. One or both (default) of c("relational", "tidy") to specify the format of the data. The default is "relational".}
+
+\item{version}{character. The folder where to locate the output_dir. The default is \code{sys.Date()}.}
 
 \item{input_pattern}{character. The file format for all input files.}
 }

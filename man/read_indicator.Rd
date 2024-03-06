@@ -4,7 +4,7 @@
 \alias{read_indicator}
 \title{Read indicator spreadsheets modified from the format of Magnus's Google Sheets}
 \usage{
-read_indicator(x, sheet = "IM Full Disaggs", version = "relational")
+read_indicator(x, sheet = "IM Full Disaggs", format)
 }
 \description{
 Read indicator spreadsheets modified from the format of Magnus's Google Sheets

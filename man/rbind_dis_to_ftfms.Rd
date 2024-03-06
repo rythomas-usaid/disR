@@ -5,14 +5,17 @@
 \title{parse DIS extracts into usable data}
 \usage{
 rbind_dis_to_ftfms(
-  input_dir = "../../indicators/extract/",
+  dis_input,
+  ftfms_input_dir = "../../indicators/extract/",
   output_dir = "../data/"
 )
 }
 \arguments{
-\item{input_dir}{a directory with raw ftfms and dis (extract) data}
+\item{dis_input}{character. File path of DIS extract CSV.}
 
-\item{output_dir}{a directory to store outputs}
+\item{ftfms_input_dir}{character. Directory path to ftfms Excel files}
+
+\item{output_dir}{character. Directory path to store outputs combined_extracts.csv and combined_extracts.Rdata}
 }
 \value{
 data.frame with combined ftfms and DIS data

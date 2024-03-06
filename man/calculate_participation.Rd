@@ -10,7 +10,7 @@ calculate_participation(
   level = NA,
   years = NA,
   ros = "all",
-  types = "Actual"
+  types = "actual"
 )
 }
 \arguments{
