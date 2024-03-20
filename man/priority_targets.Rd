@@ -4,7 +4,7 @@
 \alias{priority_targets}
 \title{Calculate all the priority target values}
 \usage{
-priority_targets(dat)
+priority_targets(x)
 }
 \value{
 a list of two data frames, one with the summary of priority targets and one with all the data for each indicator nested by activity
@@ -13,5 +13,5 @@ a list of two data frames, one with the summary of priority targets and one with
 Takes an export from DIS OU Activty Indicator Results Report
 }
 \examples{
-priority_targets(df)
+priority_targets(data)
 }
