@@ -16,7 +16,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
 
   x_names <- c("ic",  "ro", "ou", "a_code", "a_name", "type", "year", "value", "sex")
 
-  if(is.na(years)) {
+  if(all(is.na(years))) {
     years <- unique(x$year)
   }  else if(!is.numeric(years)) {
     stop("years must be a numeric vector or 'all' (the default)")
@@ -35,7 +35,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
     im_participants <- x %>%
       filter(ic == "eg.3-2"
              & ro %in% ros
-             & type %in% types
+             & str_to_lower(type) %in% str_to_lower(types)
              & !is.na(sex)
              & year %in% years) %>%
       group_by(ic, ro, ou, a_code, a_name, type, year) %>%
@@ -51,7 +51,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
     ou_participants <- x %>%
       filter(ic %in% c("eg.3-2", "eg.3-2_oulevel")
          & ro %in% ros
-         & type %in% types
+         & str_to_lower(type) %in% str_to_lower(types)
          & !is.na(sex)
          & year %in% years) %>%
       group_by(ic, ro, ou, type, year) %>%
@@ -92,7 +92,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
         disag_out <- x %>%
           filter((ic == "eg.3-2" | ic == "eg.3-2_oulevel")
                  & ro %in% ros
-                 & type %in% types
+                 & str_to_lower(type) %in% str_to_lower(types)
                  # & !is.na(sex)
                  & year %in% years) %>%
           group_by(ic, ro, ou, a_code, a_name, type, d1, d2, sex, size, typeof, year) %>%
@@ -112,7 +112,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
         disag_out <- x %>%
           filter((ic == "eg.3-2" | ic == "eg.3-2_oulevel")
                  & ro %in% ros
-                 & type %in% types
+                 & str_to_lower(type) %in% str_to_lower(types)
                  # & !is.na(sex)
                  & year %in% years) %>%
           group_by(ic, ro, ou, type, d1, d2, sex, size, typeof, year) %>%
@@ -131,7 +131,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
           disag_out <-  x %>%
             filter((ic == "eg.3-2" | ic == "eg.3-2_oulevel")
                    & ro %in% ros
-                   & type %in% types
+                   & str_to_lower(type) %in% str_to_lower(types)
                    # & !is.na(sex)
                    & year %in% years) %>%
             group_by(ic, ro, ou, type, d1, d2, sex, size, typeof, year) %>%
@@ -161,14 +161,15 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
 
 ### from extract ####
 # load("../data/combined_extracts.Rdata")
-#' @export calculate_participation
-calculate_participation_ <- function(df) {
+#' @export calculate_participation_
+calculate_participation_ <- function(x, udns = c("3.1.2", "3.1.1", "3.1.3", "3.1.4", "3.1.5"),
+                                     disaggregated = FALSE, level = NA, years = NA, ros = "all", types = "Actual") {
 
-  udns <- c("3.1.2", "3.1.1", "3.1.3", "3.1.4", "3.1.5") # sex UDNs
+  # sex UDNs
   ics <- c("EG.3-2", "EG.3-2_OULevel")
 
   df %>% select(-c(d1, d2, d3,d4)) %>%
-    filter(year == 2022 & udn %in% udns & ic %in% ics & indicator.collection.frequency == "Annual") %>%
+    filter(year %in% years & udn %in% udns & ic %in% ics & indicator.collection.frequency == "Annual") %>%
     filter(if_any(c(actual, target), ~ !is.na(.))) %>%
     left_join(dcw) %>%
     group_by(ic,ro, ou, year, d_name, d1, d2) %>%
@@ -192,12 +193,12 @@ calculate_participation_ <- function(df) {
 #'
 #' Takes an export from DIS OU Activty Indicator Results Report
 #' @return a list of two data frames, one with the summary of priority targets and one with all the data for each indicator nested by activity
-#' @examples priority_targets(df)
+#' @examples priority_targets(data)
 #' @export priority_targets
-priority_targets <- function(dat) {
-dat <- read_export("../../priority_target_KIN_section4/20240902_data/Bureau for Resilience and Food Security - OU Activity Indicator Results Report - Export All.xlsx")
+priority_targets <- function(x) {
+# dat <- read_export("../../priority_target_KIN_section4/20240902_data/Bureau for Resilience and Food Security - OU Activity Indicator Results Report - Export All.xlsx")
   ### sales ####
-  sales_raw <- dat %>%
+  sales_raw <- x %>%
     select(`Activity Name`, `Activity Code`, `Indicator Code`, UDN
            , `Fiscal Year`, `Disaggregate Name`, Target, Actual, `Collection Review Status`
            , Deviation, `Deviation Narrative`) %>%
@@ -228,7 +229,7 @@ dat <- read_export("../../priority_target_KIN_section4/20240902_data/Bureau for 
                       , "3.5.2.2.1", "3.6.2.2.1", "3.7.2.2.1"  # number of males
                       , "3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") # number of females
 
-  gender_financing_raw <- dat %>%
+  gender_financing_raw <- x %>%
     select(`Activity Name`, `Activity Code`, `Indicator Code`, UDN
            , `Fiscal Year`, `Disaggregate Name`, Target, Actual) %>%
     filter(`Indicator Code` == "EG.3.2-27" & UDN %in% financing_udns) %>%
@@ -273,7 +274,7 @@ dat <- read_export("../../priority_target_KIN_section4/20240902_data/Bureau for 
   }
 
   ### hectares ####
-  hectares_raw <- dat %>%
+  hectares_raw <- x %>%
     select(`Activity Name`, `Activity Code`, `Indicator Code`, UDN
            , `Fiscal Year`, `Disaggregate Name`, Target, Actual) %>%
     filter(`Indicator Code` == "EG.3.2-25" & UDN %in% c("3.1.3.12", "3.2.3.12"))
@@ -294,7 +295,7 @@ dat <- read_export("../../priority_target_KIN_section4/20240902_data/Bureau for 
   }
 
   ### private sector investment ####
-  private_sector_investment_raw <- dat %>%
+  private_sector_investment_raw <- x %>%
     select(`Activity Name`, `Activity Code`, `Indicator Code`, UDN
            , `Fiscal Year`, `Disaggregate Name`, Target, Actual) %>%
     filter(`Indicator Code` == "EG.3.1-15" & UDN == "3")
@@ -358,50 +359,96 @@ dat <- read_export("../../priority_target_KIN_section4/20240902_data/Bureau for 
 
 }
 
-## ... from extract ####
+# ... PTs FROM EXTRACT  ####
 #' Calculate all the priority target values
 #'
-#' Takes an export from DIS OU Activty Indicator Results Report
+#' Takes an export from DIS OU Activity Indicator Results Report
 #' @return a list of two data frames, one with the summary of priority targets and one with all the data for each indicator nested by activity
-#' @examples priority_targets_(df)
-#' @export priority_targets_
-priority_targets_ <- function(df, level = "im") {
-
-  ### gender_financing #####
+#' @export gender_financing_
+gender_financing_ <- function(x, level = "im") {
   if(level == "im") {
-    gender_financing <- df %>%
+    gender_financing <- x %>%
       get_im_financing_ratio()
-
   } else if (level == "ou") {
-
-    gender_financing <- df %>%
+    gender_financing <- x %>%
       get_im_financing_ratio() %>%
       # For OU
       group_by(ro, ou, year, name) %>%
-      summarize_financing_ratio()
-
-
+      summarize_financing_ratio(level = level)
   } else if(level == "ro") {
-
-    if(length(unique(df$ro)) == 1 ) {
-      ous <- unique(df$ou)
+    if(length(unique(x$ro)) == 1 ) {
+      ous <- unique(x$ou)
       warning(paste("Input data contains only one unique reporting organization. Results are for the following OUs:", paste(ous, collapse = ",")))
     }
-
-    gender_financing <- df %>%
-
+    gender_financing <- x %>%
       get_im_financing_ratio() %>%
       # For OU
       group_by(ro, ou, year, name) %>%
-      summarize_financing_ratio() %>%
+      summarize_financing_ratio(level = level) %>%
       # For RO
       group_by(ro, year, name) %>%
-      summarize_financing_ratio()
-
+      summarize_financing_ratio(level = level)
   }
   return(gender_financing)
 }
 
+#' @export sales_
+sales_ <- function(x, level = "ou") {
+  sales <- x %>%
+    select(ro, ou, a_name, a_code, ic, udn, year, d_name, target, actual) %>%
+    filter(ic == "EG.3.2-26" & udn == "3" ) %>% pivot_longer(c(target, actual))
+  if(level == "ou") {
+    sales <- sales %>%
+      group_by(ro, ou, ic, name, year) %>%
+      summarise(value = sum_(value)
+                , a_codes = paste0(unique(a_code), collapse="; ")
+                , .groups = "drop")
+  }
+  return(sales)
+}
+
+#' @export hectares_
+hectares_ <- function(x) {
+  hectares_raw <- x %>%
+    select(ro, ou, a_name, a_code, ic, udn
+           , year, d_name, target, actual) %>%
+    filter(ic == "EG.3.2-25" & udn %in% c("3.1.3.12", "3.2.3.12")) %>%
+    # HECTARES Raw is above.
+    pivot_longer(c(target, actual)) %>%
+      group_by(ro, ou, ic, year, name) %>%
+      summarise(value = sum_(value)
+                , a_codes = paste0(unique(a_code), collapse="; ")
+                , .groups = "drop")
+}
+
+#' @export psi_
+psi_ <- function(x) {
+  psi <- x %>%
+    select(ro, ou, a_name, a_code, ic, udn
+           , year, d_name, target, actual) %>%
+    filter(ic == "EG.3.1-15" & udn == "3") %>%
+    # RAW ABOVE. perhaps split out later
+      pivot_longer(c(target, actual)) %>%
+      group_by(ro, ou, ic, year, name) %>%
+      summarise(value = sum_(value)
+                , a_codes = paste0(unique(a_code), collapse="; ")
+                , .groups = "drop")
+  return(psi)
+  }
+
+#' @export mddw_
+mddw_ <- function(x) {
+  psi <- x %>%
+    select(ro, ou, a_name, a_code, ic, udn
+           , year, d_name, target, actual) %>%
+    filter(ic == "HL.9.1-d" & udn == "3") %>%
+    # RAW ABOVE. perhaps split out later
+    pivot_longer(c(target, actual)) %>%
+    group_by(ro, ou, ic, year, name) %>%
+    summarise(value = sum_(value)
+              , a_codes = paste0(unique(a_code), collapse="; ")
+              , .groups = "drop")
+}
 
 # Helper functions ####
 get_im_financing_ratio <- function(x){
@@ -414,7 +461,7 @@ get_im_financing_ratio <- function(x){
                       , "3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") # number of females
   x %>% select(ro, ou, a_name, a_code, ic, udn
                , year, d_name, target, actual) %>%
-    filter(ic == "EG.3.2-27" & udn %in% financing_udns) %>%
+    filter(ic == "EG.3.2-27" & year %in% years & udn %in% financing_udns) %>%
     mutate(d_name = case_when(
       udn %in% c("3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2") ~ "Female Value"
       , udn %in% c("3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") ~ "Female Number"
@@ -431,11 +478,13 @@ get_im_financing_ratio <- function(x){
            , `Female Number` = if_else(is.na(`Female Value`), NA, `Female Number`))  %>%
     mutate(`Female Per Person` = `Female Value` / `Female Number`
            , `Male Per person` = `Male Value` / `Male Number`
-           , `Gender Finance Ratio` = (`Female Per Person` / `Male Per person`)
-           , .by = c(a_code, year, name))
+           , value = (`Female Per Person` / `Male Per person`)
+           , .by = c(a_code, year, name)) %>%
+    ungroup()
 }
 
-summarize_financing_ratio <- function(x) {
+summarize_financing_ratio <- function(x, level) {
+  if (level == "im") stop("ERROR: Cannot summarize IM level.")
   # ---------- Additional summarizing from above IM-level
   x %>%
     summarise(`Female Value` = sum_(`Female Value`)
@@ -444,8 +493,8 @@ summarize_financing_ratio <- function(x) {
               , `Male Number` = sum_(`Male Number`)
               , `Female Per Person` = `Female Value` / `Female Number`
               , `Male Per person` = `Male Value` / `Male Number`
-              , `Gender Finance Ratio` = (sum_(`Female Value`) / sum_(`Female Number`)) / ( sum_(`Male Value`) / sum_(`Male Number`))
-              , a_code = paste0(unique(a_code), collapse="; ")
+              , value = (sum_(`Female Value`) / sum_(`Female Number`)) / ( sum_(`Male Value`) / sum_(`Male Number`))
+              , a_codes = paste0(unique(a_code), collapse="; ")
               , .groups = "drop")
 }
 
