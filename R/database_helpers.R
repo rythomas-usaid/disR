@@ -454,66 +454,66 @@ parse_ftfms_uic <- function(ic, d1) {
 
 # STANDARDIZE DISAGREGATES ####
 # This is a list of all the sex disaggregates for sex grouped by the label field
-cat_lookup <- bind_rows(
-  tibble(standard = "sex"
+cat_lookup <- dplyr::bind_rows(
+  tibble::tibble(standard = "sex"
          , category = c("sex")
          , disaggregate = c("female", "male", "disaggregates not available"
                             , "association-applied", "joint", "neither"
                             , "mixed sexes")
   ),
-  tibble(standard = "sex"
+  tibble::tibble(standard = "sex"
          , category = "sex of owner / producer"
          , disaggregate = c("female", "male", "joint", "n/a"
                             , "disaggregates not available", "neither")
   ),
-  tibble(standard = "sex"
+  tibble::tibble(standard = "sex"
          , category = "sex of recipient(s)"
          , disaggregate = c("female", "male", "joint","n/a", "not applicable"
                             , "disaggregates not available", "neither"
                             , "mixed (for enterprises)")
   ),
-  tibble(standard = "sex"
+  tibble::tibble(standard = "sex"
          , category = c("sex of participant (no double-counting)")
          , disaggregate = c("female", "male"
                             , "disaggregates not available", "neither")
   ),
-  tibble(standard = "sex"
+  tibble::tibble(standard = "sex"
          , category=c("sex of account owner or policy holder")
          , disaggregate = c("female", "male"
                             , "disaggregates not available", "neither"
                             , "jointly-held")
   ),
-  tibble(standard = "sex"
+  tibble::tibble(standard = "sex"
          , category = "sex (no double-counting)"
          , disaggregate = c("female", "male"
                             , "disaggregates not available", "neither")
   ),
-  tibble(standard = "sex"
+  tibble::tibble(standard = "sex"
          , category = "sex of individuals participating"
          , disaggregate = c("female", "male"
                             , "disaggregates not available"
                             ,"not applicable", "neither")
   ),
-  tibble(standard = "sex"
+  tibble::tibble(standard = "sex"
          , category = "sex of job-holder"
          , disaggregate = c("female", "male"
                             , "disaggregates not available")
   ),
 
   # this one is not really a sex disaggregate->
-  # tibble(category = "no age/sex information collected"
+  # tibble::tibble(category = "no age/sex information collected"
   #              , disaggregate = c("value of sales", "baseline sales"
   #              , "number of participants", "volume of sales (mt)"
   #              , "type of sales"))
 
   ## Age ####
-  tibble(standard = "age"
+  tibble::tibble(standard = "age"
          , category = c("age category of individuals participating"),
          disaggregate = c("disaggregates not available", "30+"
                           , "school-aged children", "15-29", "not applicable"
                           , "mixed ages (for enterprises)")
   ),
-  tibble(standard = "age"
+  tibble::tibble(standard = "age"
          , category = "age",
          disaggregate = c("women < 19", "women >= 19",
                           "disaggregates not available", "15-29", "30+"
@@ -530,25 +530,25 @@ cat_lookup <- bind_rows(
                           , "15-29 years - volume of sales"
                           , "disaggregates not available - volume of sales")
   ),
-  tibble(standard = "age"
+  tibble::tibble(standard = "age"
          , category = c("age category"),
          disaggregate = c("15-29", "30+",
                           "disaggregates not available")
   ),
-  tibble(standard = "age"
+  tibble::tibble(standard = "age"
          , category = c("age of participant (no double-counting)"),
          disaggregate = c("15-29", "30+",
                           "disaggregates not available")
   ),
-  tibble(standard = "age"
+  tibble::tibble(standard = "age"
          , category = "age group"
   ),
-  # a5 <- tibble(category = c(
+  # a5 <- tibble::tibble(category = c(
   #   rep("number of female participants of the nutrition-sensitive agriculture activity", 2),
   #   rep("percentage of female participants consuming a diet of minimum diversity", 2)),
   #              disaggregate = rep(c("age less than 19 years", "age 19+ years"), 2))
 
-  tibble(standard = "age"
+  tibble::tibble(standard = "age"
          , category = "age of recipient(s)",
          disaggregate = c("15-29", "30+", "mixed ages (for enterprises)"
                           , "disaggregates not available"
@@ -556,7 +556,7 @@ cat_lookup <- bind_rows(
   ),
 
   ## Mgmt Prac ####
-  tibble(standard = "mgmt_practice"
+  tibble::tibble(standard = "mgmt_practice"
          , category = "management practice or tech type"
          , disaggregate = c(
            "irrigation","agriculture water management-non-irrigation"
@@ -575,7 +575,7 @@ cat_lookup <- bind_rows(
   ),
 
   ## Commodities ####
-  tibble(standard = "commodity"
+  tibble::tibble(standard = "commodity"
          , category = "commodity"
          , disaggregate =
            c("disaggregates not available or other", "jute", "lentil (nrvcc)"
@@ -615,7 +615,7 @@ cat_lookup <- bind_rows(
   ),
 
   ## duration ####
-  tibble(standard = "duration"
+  tibble::tibble(standard = "duration"
          , category = "duration"
          , disaggregate = c("new", "continuing")
   )
