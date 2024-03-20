@@ -461,7 +461,7 @@ get_im_financing_ratio <- function(x){
                       , "3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") # number of females
   x %>% select(ro, ou, a_name, a_code, ic, udn
                , year, d_name, target, actual) %>%
-    filter(ic == "EG.3.2-27" & year %in% years & udn %in% financing_udns) %>%
+    filter(ic == "EG.3.2-27" & udn %in% financing_udns) %>%
     mutate(d_name = case_when(
       udn %in% c("3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2") ~ "Female Value"
       , udn %in% c("3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") ~ "Female Number"
