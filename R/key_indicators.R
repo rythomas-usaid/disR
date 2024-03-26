@@ -13,24 +13,19 @@
 # Participation EG.3-2 and HLI EG.3-2_OULevel ####
 # load("../data/basic.rdata")
 calculate_participation <- function(x, disaggregated = FALSE, level = NA, years = NA, ros = "all", types = "Actual") {
-
   x_names <- c("ic",  "ro", "ou", "a_code", "a_name", "type", "year", "value", "sex")
-
   if(all(is.na(years))) {
     years <- unique(x$year)
   }  else if(!is.numeric(years)) {
     stop("years must be a numeric vector or 'all' (the default)")
   }
-
   if(ros == "all") {
     ros <- unique(x$ro)
   }
-
   if( !all(x_names %in% names(x) ) ) {
     stop('x must contain the following columns:\n
     c("ic",  "ro", "ou", "a_code", "a_name", "type", "year", "value", "sex")')
   }
-
   if( !isTRUE( disaggregated )) {
     im_participants <- x %>%
       filter(ic == "eg.3-2"
@@ -38,16 +33,12 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
              & str_to_lower(type) %in% str_to_lower(types)
              & !is.na(sex)
              & year %in% years) %>%
-      group_by(ic, ro, ou, a_code, a_name, type, year) %>%
-      summarise(`eg.3-2_final` = sum_(value))  %>%
+      pivot_wider(names_from = ic, values_from = value) %>%
+      group_by(ro, ou, a_code, a_name, type, year) %>%
+      summarise(`eg.3-2`=sum_(`eg.3-2`), `eg.3-2_final`=sum_(`eg.3-2`))  %>%
       arrange(year, ro, ou) %>% ungroup() %>%
-      mutate(year = as.numeric(str_remove(year, "FY"))
-             , organization_level = "IM Total") %>%
-      select(-ic) %>%
-      # left_join(ou_lookup) %>%
-      # select(organization_level, operating_unit, year, participants)
+      mutate(organization_level = "IM Total") %>%
       select(organization_level, everything())
-
     ou_participants <- x %>%
       filter(ic %in% c("eg.3-2", "eg.3-2_oulevel")
          & ro %in% ros
@@ -57,76 +48,56 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
       group_by(ic, ro, ou, type, year) %>%
       summarise(value = sum_(value)) %>%
       pivot_wider(names_from = ic, values_from = value) %>%
-      mutate(
-        `eg.3-2_final` = case_when(
-          is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
-          , .default = `eg.3-2_oulevel`
-          )
-    # , flag = case_when(`eg.3-2` < `eg.3-2_oulevel` ~ "Wrong relationship between IM and OU totals")
-    ) %>%
+      mutate(`eg.3-2_final` = case_when(is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
+                                        , .default = `eg.3-2_oulevel`)
+             # , flag = case_when(`eg.3-2` < `eg.3-2_oulevel` ~ "Wrong relationship between IM and OU totals")
+             ) %>%
       arrange(year, ro, ou) %>% ungroup() %>%
-      mutate(year = as.numeric(str_remove(year, "FY"))
-             , organization_level = "OU Total") %>%
+      mutate(organization_level = "OU Total") %>%
       select(organization_level, everything())
-
     ro_participants <- ou_participants  %>%
       group_by(ro, type, year) %>%
       summarise(`eg.3-2` = sum_(`eg.3-2`)
                 , `eg.3-2_oulevel` = sum_(`eg.3-2_oulevel`)
                 , `eg.3-2_final` = sum_(`eg.3-2_final`)) %>%
       mutate(organization_level = "RO Total", .before = everything())
-
-    aggregated_out <- ungroup(bind_rows(ro_participants, ou_participants, im_participants)) %>%
+    aggregated_out <- ungroup(bind_rows(
+      ro_participants, ou_participants, im_participants)) %>%
       relocate(organization_level, ro, ou, a_code, a_name, year, everything())
 
     return(aggregated_out)
-
     } else if(isTRUE(disaggregated)) {
-
-      if( ! level %in% c("im", "ou", "ro")) {
-
+      if(!level %in% c("im", "ou", "ro")) {
         stop('Argument `level` cannot be "all" for disaggregated results. Must be one of "im", "ou", "ro".\n
              Most likely, you meant to set `level = "ou"`.'  )
-
       } else if(level == "im") {
         disag_out <- x %>%
           filter((ic == "eg.3-2" | ic == "eg.3-2_oulevel")
                  & ro %in% ros
                  & str_to_lower(type) %in% str_to_lower(types)
-                 # & !is.na(sex)
-                 & year %in% years) %>%
-          group_by(ic, ro, ou, a_code, a_name, type, d1, d2, sex, size, typeof, year) %>%
-          summarise(value = sum_(value)) %>%
+                 & year %in% years)  %>%
+          select(ic, ro, ou, a_name, a_code, d1, d2, sex, size, typeof, type, year, value) %>%
           pivot_wider(names_from = ic, values_from = value) %>%
-          mutate(
-            `eg.3-2_final`= case_when(
-              is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
-              , .default = `eg.3-2_oulevel`)) %>%
+          mutate(`eg.3-2_final` =  `eg.3-2`) %>%
           arrange(year, ro, ou, d1, d2) %>% ungroup() %>%
-          mutate(year = as.numeric(str_remove(year, "FY"))
-                 , organization_level = "IM Disags") %>%
+          mutate(organization_level = "OU Disags") %>%
           select(organization_level, everything())
-
         } else if(level == "ou"){
-
         disag_out <- x %>%
           filter((ic == "eg.3-2" | ic == "eg.3-2_oulevel")
                  & ro %in% ros
                  & str_to_lower(type) %in% str_to_lower(types)
-                 # & !is.na(sex)
                  & year %in% years) %>%
-          group_by(ic, ro, ou, type, d1, d2, sex, size, typeof, year) %>%
-          summarise(value = sum_(value)) %>%
-          pivot_wider(names_from = ic, values_from = value) %>%
-          mutate(
-            `eg.3-2_final` = case_when(
-              is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
-              , .default = `eg.3-2_oulevel`)) %>%
+          select(ic, ro, ou, a_name, a_code, d1, d2, sex, size, typeof, type, year, value) %>%
+          pivot_wider(names_from = ic, values_from = value) %>%   ungroup() %>%
+          group_by(ro, ou, d1, d2, sex, size, typeof, type, year) %>%
+          summarize(`eg.3-2` = sum_(`eg.3-2`), `eg.3-2_oulevel` = sum_(`eg.3-2_oulevel`)) %>%
+          mutate(`eg.3-2_final` = case_when(
+            is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
+            , .default = `eg.3-2_oulevel`)) %>%
           arrange(year, ro, ou, d1, d2) %>% ungroup() %>%
-          mutate(year = as.numeric(str_remove(year, "FY"))
-                 , organization_level = "OU Disags") %>%
+          mutate(organization_level = "OU Disags") %>%
           select(organization_level, everything())
-
         } else if(level == "ro") {
           disag_out <-  x %>%
             filter((ic == "eg.3-2" | ic == "eg.3-2_oulevel")
@@ -134,29 +105,23 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
                    & str_to_lower(type) %in% str_to_lower(types)
                    # & !is.na(sex)
                    & year %in% years) %>%
-            group_by(ic, ro, ou, type, d1, d2, sex, size, typeof, year) %>%
-            summarise(value = sum_(value)) %>%
-            pivot_wider(names_from = ic, values_from = value) %>%
-            mutate(
-              `eg.3-2_final` = case_when(
-                is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
-                , .default = `eg.3-2_oulevel`)) %>%
-            arrange(year, ro, ou, d1, d2) %>% ungroup() %>%
-            mutate(year = as.numeric(str_remove(year, "FY"))) %>%
-
+            select(ic, ro, ou, a_name, a_code, d1, d2, sex, size, typeof, type, year, value) %>%
+            pivot_wider(names_from = ic, values_from = value) %>%   ungroup() %>%
+            group_by(ro, ou, d1, d2, sex, size, typeof, type, year) %>%
+            summarize(`eg.3-2` = sum_(`eg.3-2`), `eg.3-2_oulevel` = sum_(`eg.3-2_oulevel`)) %>%
+            mutate(`eg.3-2_final` = case_when(
+              is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
+              , .default = `eg.3-2_oulevel`)) %>%
             # After calculating OU disags as above ...
-            group_by(ro, type, d1, d2, sex, size, typeof, year) %>%
+            group_by(ro, d1, d2, sex, size, typeof, type, year) %>%
             summarise(`eg.3-2` = sum_(`eg.3-2`)
                       , `eg.3-2_oulevel` = sum_(`eg.3-2_oulevel`)
-                      , `eg.3-2_final` = sum_(`eg.3-2_final`)) %>%
+                      , `eg.3-2_final` = sum_(`eg.3-2_final`)
+                      , .groups = "drop") %>%
             mutate(organization_level = "RO Disags", .before = everything())
-
       }
-
       return(ungroup(disag_out))
-
     }
-
 }
 
 ### from extract ####
@@ -216,13 +181,9 @@ priority_targets <- function(x) {
       # reorder columns
       relocate(Target, .before=Actual) %>%
       mutate(`Priority Target` = "PT1: Value of annual sales")
-
   } else {
-
     sales <- NULL
-
   }
-
   ### gender_financing #####
   financing_udns <- c("3.5.1.2.1", "3.6.1.2.1 ", "3.7.1.2.1"   # value for males
                       , "3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2"  # value for females
@@ -409,7 +370,7 @@ sales_ <- function(x, level = "ou") {
 
 #' @export hectares_
 hectares_ <- function(x) {
-  hectares_raw <- x %>%
+  hectares <- x %>%
     select(ro, ou, a_name, a_code, ic, udn
            , year, d_name, target, actual) %>%
     filter(ic == "EG.3.2-25" & udn %in% c("3.1.3.12", "3.2.3.12")) %>%
@@ -419,6 +380,7 @@ hectares_ <- function(x) {
       summarise(value = sum_(value)
                 , a_codes = paste0(unique(a_code), collapse="; ")
                 , .groups = "drop")
+  return(hectares)
 }
 
 #' @export psi_
@@ -438,7 +400,7 @@ psi_ <- function(x) {
 
 #' @export mddw_
 mddw_ <- function(x) {
-  psi <- x %>%
+  mddw <- x %>%
     select(ro, ou, a_name, a_code, ic, udn
            , year, d_name, target, actual) %>%
     filter(ic == "HL.9.1-d" & udn == "3") %>%
@@ -448,12 +410,12 @@ mddw_ <- function(x) {
     summarise(value = sum_(value)
               , a_codes = paste0(unique(a_code), collapse="; ")
               , .groups = "drop")
+  return(mddw)
 }
 
 # Helper functions ####
 get_im_financing_ratio <- function(x){
   # if( ! all(col_names %in% names(x))) stop("! Check column names.")
-
   ### gender_financing_udns ###
   financing_udns <- c("3.5.1.2.1", "3.6.1.2.1 ", "3.7.1.2.1"   # value for males
                       , "3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2"  # value for females
@@ -477,8 +439,8 @@ get_im_financing_ratio <- function(x){
            , `Male Number` = if_else(is.na(`Male Value`), NA, `Male Number`)
            , `Female Number` = if_else(is.na(`Female Value`), NA, `Female Number`))  %>%
     mutate(`Female Per Person` = `Female Value` / `Female Number`
-           , `Male Per person` = `Male Value` / `Male Number`
-           , value = (`Female Per Person` / `Male Per person`)
+           , `Male Per Person` = `Male Value` / `Male Number`
+           , value = (`Female Per Person` / `Male Per Person`)
            , .by = c(a_code, year, name)) %>%
     ungroup()
 }
@@ -492,7 +454,7 @@ summarize_financing_ratio <- function(x, level) {
               , `Male Value` = sum_(`Male Value`)
               , `Male Number` = sum_(`Male Number`)
               , `Female Per Person` = `Female Value` / `Female Number`
-              , `Male Per person` = `Male Value` / `Male Number`
+              , `Male Per Person` = `Male Value` / `Male Number`
               , value = (sum_(`Female Value`) / sum_(`Female Number`)) / ( sum_(`Male Value`) / sum_(`Male Number`))
               , a_codes = paste0(unique(a_code), collapse="; ")
               , .groups = "drop")
