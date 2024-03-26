@@ -45,10 +45,11 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
          & str_to_lower(type) %in% str_to_lower(types)
          & !is.na(sex)
          & year %in% years) %>%
-      group_by(ic, ro, ou, type, year) %>%
-      summarise(value = sum_(value)) %>%
       pivot_wider(names_from = ic, values_from = value) %>%
-      mutate(`eg.3-2_final` = case_when(is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
+      group_by(ro, ou, a_code, a_name, type, year) %>%
+      summarise(`eg.3-2`=sum_(`eg.3-2`)
+                , `eg.3-2_oulevel`= sum_(`eg.3-2_oulevel`)) %>%
+      mutate(`eg.3-2_final` = case_when(all(`eg.3-2_oulevel`, ~ is.na(.)) ~ `eg.3-2`
                                         , .default = `eg.3-2_oulevel`)
              # , flag = case_when(`eg.3-2` < `eg.3-2_oulevel` ~ "Wrong relationship between IM and OU totals")
              ) %>%
@@ -78,7 +79,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
                  & year %in% years)  %>%
           select(ic, ro, ou, a_name, a_code, d1, d2, sex, size, typeof, type, year, value) %>%
           pivot_wider(names_from = ic, values_from = value) %>%
-          mutate(`eg.3-2_final` =  `eg.3-2`) %>%
+          mutate(`eg.3-2_final` = `eg.3-2`) %>%
           arrange(year, ro, ou, d1, d2) %>% ungroup() %>%
           mutate(organization_level = "OU Disags") %>%
           select(organization_level, everything())
@@ -92,9 +93,10 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
           pivot_wider(names_from = ic, values_from = value) %>%   ungroup() %>%
           group_by(ro, ou, d1, d2, sex, size, typeof, type, year) %>%
           summarize(`eg.3-2` = sum_(`eg.3-2`), `eg.3-2_oulevel` = sum_(`eg.3-2_oulevel`)) %>%
-          mutate(`eg.3-2_final` = case_when(
-            is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
-            , .default = `eg.3-2_oulevel`)) %>%
+          mutate(`eg.3-2_final` = case_when(all(`eg.3-2_oulevel`, ~ is.na(.)) ~ `eg.3-2`
+                                            , .default = `eg.3-2_oulevel`)
+                 # , flag = case_when(`eg.3-2` < `eg.3-2_oulevel` ~ "Wrong relationship between IM and OU totals")
+          ) %>%
           arrange(year, ro, ou, d1, d2) %>% ungroup() %>%
           mutate(organization_level = "OU Disags") %>%
           select(organization_level, everything())
@@ -109,9 +111,10 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
             pivot_wider(names_from = ic, values_from = value) %>%   ungroup() %>%
             group_by(ro, ou, d1, d2, sex, size, typeof, type, year) %>%
             summarize(`eg.3-2` = sum_(`eg.3-2`), `eg.3-2_oulevel` = sum_(`eg.3-2_oulevel`)) %>%
-            mutate(`eg.3-2_final` = case_when(
-              is.na(`eg.3-2_oulevel`) ~ `eg.3-2`
-              , .default = `eg.3-2_oulevel`)) %>%
+            mutate(`eg.3-2_final` = case_when(all(`eg.3-2_oulevel`, ~ is.na(.)) ~ `eg.3-2`
+                                              , .default = `eg.3-2_oulevel`)
+                   # , flag = case_when(`eg.3-2` < `eg.3-2_oulevel` ~ "Wrong relationship between IM and OU totals")
+            ) %>%
             # After calculating OU disags as above ...
             group_by(ro, d1, d2, sex, size, typeof, type, year) %>%
             summarise(`eg.3-2` = sum_(`eg.3-2`)
