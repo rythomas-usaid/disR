@@ -80,7 +80,7 @@ calculate_participation <- function(x, disaggregated = FALSE, level = NA, years 
           pivot_wider(names_from = ic, values_from = value) %>%
           mutate(`eg.3-2_final` = `eg.3-2`) %>%
           arrange(year, ro, ou, d1, d2) %>% ungroup() %>%
-          mutate(organization_level = "OU Disags") %>%
+          mutate(organization_level = "IM Disags") %>%
           select(organization_level, everything())
         } else if(level == "ou"){
         disag_out <- x %>%
