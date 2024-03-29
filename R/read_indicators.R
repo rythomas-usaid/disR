@@ -20,7 +20,6 @@ rbind_dis_to_ftfms <- function(dis_input, ftfms_input_dir = "../../indicators/ex
   write.csv(df, paste0(output_dir, "combined_extracts.csv"))
   save(df, file = "../data/combined_extracts.Rdata")
   # return(df)
-
 }
 
 
@@ -146,9 +145,7 @@ read_dis <- function(input) {
   # load("../database/extract/indicators_db.rdata")
   print("Reading DIS extract ... ")
   # data.table is faster at reading large files
-  dat <- data.table::fread( input
-                            , colClasses=c("Activity.Code"="character")
-                            , na.strings = "") %>% as.data.frame() %>%
+  dat <- data.table::fread(input, na.strings = "") %>% as.data.frame() %>%
     rename_extract_columns()
 
   # print("Changing all characters to lower case ...")
@@ -191,10 +188,9 @@ read_dis <- function(input) {
   # dat$third_order <- NULL
   # dat$fourth_order <- NULL
 
-  dis <- as_tibble(dat) %>% left_join(disaggregate_crosswalk, relationship = "many-to-one")
+  dis <- tibble::as_tibble(dat) %>% dplyr::left_join(disaggregate_crosswalk, relationship = "many-to-one")
 
   return(dis)
-
 }
 
 
@@ -272,12 +268,26 @@ make_human_readable_names <- function(x) {
   names(x)[names(x) == "managing.office.code"] <- "Managing Office Code"
   names(x)[names(x) == "managing.office.name"] <- "Managing Office Name"
   names(x)[names(x) == "udn"] <- "UDN"
+
+  names(x)[names(x) == "d1"] <- "First order disaggregate"
+  names(x)[names(x) == "d2"] <- "Second order disaggregate"
+  names(x)[names(x) == "d3"] <- "Third order disaggregate"
+  names(x)[names(x) == "d4"] <- "Fourth order disaggregate"
+  names(x)[names(x) == "sex"] <- "Sex"
+  names(x)[names(x) == "age"] <- "Age"
+  names(x)[names(x) == "size"] <- "Size"
+
+  names(x)[names(x) == "unit"] <- "Unit"
+  names(x)[names(x) == "typeof"] <- "Type of unit"
+
   names(x)[names(x) == "fiscal.year"] <- "Fiscal Year"
   names(x)[names(x) == "year"] <- "Fiscal Year"
   names(x)[names(x) == "target"] <- "Target"
   names(x)[names(x) == "actual"] <- "Actual"
+  names(x)[names(x) == "type"] <- "Type"
   names(x)[names(x) == "target.value"] <- "Target"
   names(x)[names(x) == "actual.value"] <- "Actual"
+  names(x)[get_ic_names(x, "eg")] <- gsub("eg", "EG",  names(x)[get_ic_names(x, "eg")])
   return(x)
 }
 
