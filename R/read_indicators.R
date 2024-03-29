@@ -11,7 +11,7 @@
 #'
 #' @export rbind_dis_to_ftfms
 rbind_dis_to_ftfms <- function(dis_input, ftfms_input_dir = "../../indicators/extract/", output_dir = "../data/") {
-  dis <- read_dis(input_dir = dis_input)
+  dis <- read_dis(input = dis_input)
   ms <- read_ftfms(input_dir = ftfms_input_dir)
 
   df <- dplyr::bind_rows(dis, ms) %>%
@@ -58,18 +58,18 @@ read_indicator <- function(x, sheet = "IM Full Disaggs", format) {
 #' parse DIS extracts into usable data
 #'
 #' create data set from DIS exports and FTFMS data
-#' @param input_dir a directory with raw ftfms and dis (extract) data
+#' @param input a directory with raw ftfms and dis (extract) data
 #' @return data.frame with combined ftfms data
 #' @examples
 #' #' ms <- read_ftfms()
 #' @import tidyverse
 #'
 #' @export read_ftfms
-read_ftfms <- function(input_dir = "../../indicators/extract/") {
+read_ftfms <- function(input = "../../indicators/extract/") {
 
-  ms1 <- openxlsx::read.xlsx(paste0(input_dir, "ftfms/FTFMS Full Dataset 2011-2019 1.xlsx"))
+  ms1 <- openxlsx::read.xlsx(paste0(input, "ftfms/FTFMS Full Dataset 2011-2019 1.xlsx"))
   ms1$DisaggregationName5 <- as.character(ms1$DisaggregationName5)
-  ms2 <- openxlsx::read.xlsx(paste0(input_dir, "ftfms/FTFMS Full Dataset 2011-2019 2.xlsx"))
+  ms2 <- openxlsx::read.xlsx(paste0(input, "ftfms/FTFMS Full Dataset 2011-2019 2.xlsx"))
   ms2$DisaggregationName5 <- as.character(ms2$DisaggregationName5)
 
   ms <- rbind(ms1, ms2)
@@ -140,8 +140,6 @@ read_ftfms <- function(input_dir = "../../indicators/extract/") {
 #' @export read_dis
 read_dis <- function(input) {
 
-  disaggregate_crosswalk <- make_disaggregate_crosswalk()
-
   # load("../database/extract/indicators_db.rdata")
   print("Reading DIS extract ... ")
   # data.table is faster at reading large files
@@ -183,16 +181,13 @@ read_dis <- function(input) {
   #       dplyr::distinct())
 
   dat$id <- NULL
+  dis <- as_tibble(dis)
   # dat$first_order <- NULL
   # dat$second_order <- NULL
   # dat$third_order <- NULL
   # dat$fourth_order <- NULL
-
-  dis <- tibble::as_tibble(dat) %>% dplyr::left_join(disaggregate_crosswalk, relationship = "many-to-one")
-
   return(dis)
 }
-
 
 #' @export rename_extract_columns
 #'
@@ -233,9 +228,22 @@ rename_extract_columns <- function(x) {
   names(x)[names(x) %in% c("indicator disaggregates: 4th order", "indicator.disaggregates:.4th.order")] <- "d4"
   names(x)[names(x) %in% c("target value", "target.value")] <- "target"
   names(x)[names(x) %in% c("actual value", "actual.value")] <- "actual"
-   return(x)
+  return(x)
 }
 
+prefix_ic <- function(ic, x) {
+  new_name <- gsub(tolower(ic), toupper(ic), x)
+  return(new_name)
+}
+
+get_names <- function(x, ic) {
+    sapply(names(im_disags), function(x) strsplit(x, split = "[.]")[[1]][1] == ic)
+  }
+rename_ic <- function(x, ic) {
+  names_lgl <- get_ic_names(x, ic)
+  names(x)[names_lgl] <- prefix_ic(ic, names(x)[names_lgl])
+  return(x)
+}
 
 #' @export make_human_readable_names
 #'
@@ -287,7 +295,7 @@ make_human_readable_names <- function(x) {
   names(x)[names(x) == "type"] <- "Type"
   names(x)[names(x) == "target.value"] <- "Target"
   names(x)[names(x) == "actual.value"] <- "Actual"
-  names(x)[get_ic_names(x, "eg")] <- gsub("eg", "EG",  names(x)[get_ic_names(x, "eg")])
+  x <- rename_ic(x, "eg")
   return(x)
 }
 
