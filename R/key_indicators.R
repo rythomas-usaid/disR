@@ -401,7 +401,7 @@ psi_ <- function(x, level = "ou", max_year = year(Sys.Date())) {
              target.lag.2 = lag(target, n=2, order_by = year),
              target.lag.1 = lag(target, n=1, order_by = year),) %>%
       rowwise() %>% mutate(actual_3y = mean(c(actual, actual.lag.1, actual.lag.2), na.rm=T)
-                           , target_3y = mean(c(target, target.lag.1, target.lag.2), na.rm=T)
+                           , target_3y = mean(c(target, actual.lag.1, actual.lag.2), na.rm=T)
                            , .after = actual) %>%
       select(-contains("lag")) %>%
       pivot_longer(starts_with(c("target", "actual")))
@@ -429,7 +429,7 @@ psi_ <- function(x, level = "ou", max_year = year(Sys.Date())) {
            target.lag.2 = lag(target, n=2, order_by = year),
            target.lag.1 = lag(target, n=1, order_by = year),) %>%
     rowwise() %>% mutate(actual_3y = mean(c(actual, actual.lag.1, actual.lag.2), na.rm=T)
-                         , target_3y = mean(c(target, target.lag.1, target.lag.2), na.rm=T)
+                         , target_3y = mean(c(target, actual.lag.1, actual.lag.2), na.rm=T)
                          , .after = actual) %>%
     select(-contains("lag")) %>%
     pivot_longer(starts_with(c("target", "actual")))
