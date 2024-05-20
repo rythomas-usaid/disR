@@ -4,10 +4,10 @@
 \alias{read_ftfms}
 \title{parse DIS extracts into usable data}
 \usage{
-read_ftfms(input_dir = "../../indicators/extract/")
+read_ftfms(input = "../../indicators/extract/")
 }
 \arguments{
-\item{input_dir}{a directory with raw ftfms and dis (extract) data}
+\item{input}{a directory with raw ftfms and dis (extract) data}
 }
 \value{
 data.frame with combined ftfms data

@@ -176,5 +176,16 @@ make_database <- function(input_dir = "../../indicators/basic"
   }
 }
 
+write_extract_to_sql <- function(dat, output_dir) {
+  drv <- dbDriver("SQLite")
+  out_dir <- paste0(output_dir, gsub("-", "_", Sys.Date()))
+  if(!exists(out_dir)) dir.create(out_dir)
+  tfile <- paste0(out_dir, "/dis_extract.db")
+  con <- dbConnect(drv, dbname = tfile)
+  dbWriteTable(con, "extract", as.data.frame(dis))
+  dbDisconnect(con)
+}
+
+
 
 

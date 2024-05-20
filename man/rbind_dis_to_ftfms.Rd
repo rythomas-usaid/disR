@@ -6,14 +6,14 @@
 \usage{
 rbind_dis_to_ftfms(
   dis_input,
-  ftfms_input_dir = "../../indicators/extract/",
+  ftfms_input = "../../indicators/extract/",
   output_dir = "../data/"
 )
 }
 \arguments{
 \item{dis_input}{character. File path of DIS extract CSV.}
 
-\item{ftfms_input_dir}{character. Directory path to ftfms Excel files}
+\item{ftfms_input}{character. Directory path to ftfms Excel files}
 
 \item{output_dir}{character. Directory path to store outputs combined_extracts.csv and combined_extracts.Rdata}
 }
@@ -22,7 +22,4 @@ data.frame with combined ftfms and DIS data
 }
 \description{
 create data set from DIS exports and FTFMS data
-}
-\examples{
-#' combine_extracts()
 }

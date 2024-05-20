@@ -1,18 +1,16 @@
 #' parse DIS extracts into usable data
 #'
 #' create data set from DIS exports and FTFMS data
-#' @param ftfms_input_dir character. Directory path to ftfms Excel files
+#' @param ftfms_input character. Directory path to ftfms Excel files
 #' @param dis_input character. File path of DIS extract CSV.
 #' @param output_dir character. Directory path to store outputs combined_extracts.csv and combined_extracts.Rdata
 #' @return data.frame with combined ftfms and DIS data
-#' @examples
-#' #' combine_extracts()
 #' @import tidyverse
 #'
 #' @export rbind_dis_to_ftfms
-rbind_dis_to_ftfms <- function(dis_input, ftfms_input_dir = "../../indicators/extract/", output_dir = "../data/") {
+rbind_dis_to_ftfms <- function(dis_input, ftfms_input = "../../indicators/extract/", output_dir = "../data/") {
   dis <- read_dis(input = dis_input)
-  ms <- read_ftfms(input_dir = ftfms_input_dir)
+  ms <- read_ftfms(input = ftfms_input)
 
   df <- dplyr::bind_rows(dis, ms) %>%
     dplyr::mutate(uic = make_uic(tolower(ic), tolower(d1), tolower(d2)))
@@ -126,33 +124,25 @@ read_ftfms <- function(input = "../../indicators/extract/") {
 
 }
 
-
-#' parse DIS extracts into usable data
+#' Read DIS Excel reports from
 #'
-#' create data set from DIS exports and FTFMS data
-#' @param input_dir a directory with raw dis (extract CSV) data
-#' @param output_dir a directory to store outputs
-#' @return data.frame with combined DIS data
+#' Read data set from DIS exports and rename the columns to be standardized
+#' @param input character. An excel file exported from DIS
+#' @return data.frame with DIS exported data
 #' @examples
-#' #' dis <- read_dis()
+#' #' dis <- read_excel_dis()
 #' @import tidyverse
 #'
-#' @export read_dis
-read_dis <- function(input) {
-
+#' @export read_excel_dis
+read_excel_dis <- function(input) {
   # load("../database/extract/indicators_db.rdata")
   print("Reading DIS extract ... ")
   # data.table is faster at reading large files
-  dat <- data.table::fread(input, na.strings = "") %>% as.data.frame() %>%
-    rename_extract_columns()
-
+  dat <- openxlsx::read.xlsx(input, na.strings = c("NA", "", "-")) %>% rename_extract_columns()
   # print("Changing all characters to lower case ...")
   # make sure all the values are lowercase
   # dat[, sapply(dat, is.character)] <- lapply(dat[, sapply(dat, is.character)], tolower)
-
   dat$system <- "dis"
-
-
   # make_uic <- function(ic) {
   #   ifelse(ic %in% c("eg.3.2-24", "eg.3.2-x17"), "eg.3.2-24/eg.3.2-x17"
   #   , ifelse(ic %in% c("eg.3.2-25","eg.3.2-x18"), "eg.3.2-25/eg.3.2-x18"
@@ -161,16 +151,13 @@ read_dis <- function(input) {
   #   , ifelse(ic %in% c("eg.3.1-14/-15","eg.3.2-x22"),"eg.3.1-14/-15/eg.3.2-x22"
   #   , ic)))))
   # }
-
   # dat$uic <- make_uic(dat$ic)
   dat$actual <- as.numeric(dat$actual)
   dat$target <- as.numeric(dat$target)
   dat$uudn <- paste(dat$ic, dat$udn, sep = "_")
   dat$commodity <- trimws(dat$commodity)
-
   # dcw <- make_dis_crosswalk() #%>%
   #   dplyr::mutate(ic = stringr::str_to_lower(ic))
-
   # commodity_udns <- dcw %>%
   #   dplyr::filter(if_any(ends_with("order"), ~ stringr::str_detect(., "\\["))) %>%
   #   dplyr::distinct(ic, udn) %>%
@@ -179,14 +166,74 @@ read_dis <- function(input) {
   #       dplyr::filter(
   #         dat, !is.na(commodity)), ic, udn, commodity) %>%
   #       dplyr::distinct())
-
   dat$id <- NULL
-  dis <- as_tibble(dis)
+  dat <- as_tibble(dat)
   # dat$first_order <- NULL
   # dat$second_order <- NULL
   # dat$third_order <- NULL
   # dat$fourth_order <- NULL
-  return(dis)
+    return(dat)
+}
+
+
+#' parse DIS extracts into usable data
+#'
+#' create data set from DIS exports and FTFMS data
+#' @param input character. a directory with raw dis (extract CSV) data
+#' @param output_dir character. A directory to store outputs, or NA (default) to print output
+#' @return data.frame with combined DIS data
+#' @examples
+#' #' dis <- read_dis_extract()
+#' @import tidyverse
+#'
+#' @export read_dis_extract
+read_dis_extract <- function(input, output_dir = NA) {
+  # load("../database/extract/indicators_db.rdata")
+  print("Reading DIS extract ... ")
+  # data.table is faster at reading large files
+  dat <- data.table::fread(input, na.strings = c("", "-")) %>% as.data.frame() %>%
+    rename_extract_columns()
+  # print("Changing all characters to lower case ...")
+  # make sure all the values are lowercase
+  # dat[, sapply(dat, is.character)] <- lapply(dat[, sapply(dat, is.character)], tolower)
+  dat$system <- "dis"
+  # make_uic <- function(ic) {
+  #   ifelse(ic %in% c("eg.3.2-24", "eg.3.2-x17"), "eg.3.2-24/eg.3.2-x17"
+  #   , ifelse(ic %in% c("eg.3.2-25","eg.3.2-x18"), "eg.3.2-25/eg.3.2-x18"
+  #   , ifelse(ic %in% c("eg.3.2-26", "eg.3.2-x19"), "eg.3.2-26/eg.3.2-x19"
+  #   , ifelse(ic %in% c("eg.3.2-27","eg.3.2-x6"), "eg.3.2-27/eg.3.2-x6"
+  #   , ifelse(ic %in% c("eg.3.1-14/-15","eg.3.2-x22"),"eg.3.1-14/-15/eg.3.2-x22"
+  #   , ic)))))
+  # }
+  # dat$uic <- make_uic(dat$ic)
+  dat$actual <- as.numeric(dat$actual)
+  dat$target <- as.numeric(dat$target)
+  dat$uudn <- paste(dat$ic, dat$udn, sep = "_")
+  dat$commodity <- trimws(dat$commodity)
+  # dcw <- make_dis_crosswalk() #%>%
+  #   dplyr::mutate(ic = stringr::str_to_lower(ic))
+  # commodity_udns <- dcw %>%
+  #   dplyr::filter(if_any(ends_with("order"), ~ stringr::str_detect(., "\\["))) %>%
+  #   dplyr::distinct(ic, udn) %>%
+  #   dplyr::left_join(
+  #     dplyr::select(
+  #       dplyr::filter(
+  #         dat, !is.na(commodity)), ic, udn, commodity) %>%
+  #       dplyr::distinct())
+  dat$id <- NULL
+  # dat$first_order <- NULL
+  # dat$second_order <- NULL
+  # dat$third_order <- NULL
+  # dat$fourth_order <- NULL
+  # if(is.na(output_dir)) {
+    return(dat)
+  # } else if(is.character(output_dir)) {
+  #   drv <- dbDriver("SQLite")
+  #   tfile <- paste0(output_dir, Sys.Date(), "/dis_extract.db")
+  #   con <- dbConnect(drv, dbname = "dis_extract.db")
+  #   dbWriteTable(con, "extract", as.data.frame(dat))
+  #   dbDisconnect(con)
+  #   }
 }
 
 #' @export rename_extract_columns
@@ -228,25 +275,25 @@ rename_extract_columns <- function(x) {
   names(x)[names(x) %in% c("indicator disaggregates: 4th order", "indicator.disaggregates:.4th.order")] <- "d4"
   names(x)[names(x) %in% c("target value", "target.value")] <- "target"
   names(x)[names(x) %in% c("actual value", "actual.value")] <- "actual"
+  x <- janitor::clean_names(x)
   return(x)
 }
 
+
+#' @export make_human_readable_names
+#'
 prefix_ic <- function(ic, x) {
   new_name <- gsub(tolower(ic), toupper(ic), x)
   return(new_name)
 }
-
 get_names <- function(x, ic) {
-    sapply(names(im_disags), function(x) strsplit(x, split = "[.]")[[1]][1] == ic)
+    sapply(names(x), function(x) strsplit(x, split = "[.]")[[1]][1] == ic)
   }
 rename_ic <- function(x, ic) {
-  names_lgl <- get_ic_names(x, ic)
+  names_lgl <- get_names(x, ic)
   names(x)[names_lgl] <- prefix_ic(ic, names(x)[names_lgl])
   return(x)
 }
-
-#' @export make_human_readable_names
-#'
 make_human_readable_names <- function(x) {
 
   names(x)[names(x) == "organization_level"] <- "Organization Level"

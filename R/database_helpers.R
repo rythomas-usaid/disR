@@ -110,6 +110,14 @@ reclassify_disag4 <- function(ic, d1, d2, d3, d4) {
   )
 }
 
+# Standardize disaggregates ---------------
+#' @export
+join_disaggregate_crosswalk <- function(x) {
+  disaggregate_crosswalk <- make_disaggregate_crosswalk()
+  dis <- tibble::as_tibble(x) %>%
+    dplyr::left_join(disaggregate_crosswalk, relationship = "many-to-one")
+}
+
 #' @export add_disaggregate_categories
 add_disaggregate_categories <- function(x) {
   x %>%
