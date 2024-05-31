@@ -176,16 +176,39 @@ make_database <- function(input_dir = "../../indicators/basic"
   }
 }
 
-write_extract_to_sql <- function(dat, output_dir) {
-  drv <- dbDriver("SQLite")
-  out_dir <- paste0(output_dir, gsub("-", "_", Sys.Date()))
-  if(!exists(out_dir)) dir.create(out_dir)
-  tfile <- paste0(out_dir, "/dis_extract.db")
-  con <- dbConnect(drv, dbname = tfile)
-  dbWriteTable(con, "extract", as.data.frame(dis))
-  dbDisconnect(con)
+#' @export make_sqlite_database
+make_sqlite_database <- function(x, d = Sys.Date(), overwrite = TRUE) {
+  # "../indicators/DIS ENT - OU Activity Indicator Results (All Data)_20240528.csv"
+  data <- data.table::fread(x, na.strings = c("", "-")) %>% as.data.frame() %>%
+    rename_extract_columns() %>%
+    dplyr::filter(collection_period_frequency  == "Annual")
+
+  pt_udns <- tibble::tribble(
+    ~ic,        ~udn,
+    "EG.3.2-25",  "3.1.3.12",
+    "EG.3.2-25",  "3.2.3.12",
+    "EG.3.2-26",         "3",
+    "EG.3.2-27", "3.5.1.2.1",
+    "EG.3.2-27", "3.6.1.2.1",
+    "EG.3.2-27", "3.7.1.2.1",
+    "EG.3.2-27", "3.5.1.2.2",
+    "EG.3.2-27", "3.6.1.2.2",
+    "EG.3.2-27", "3.7.1.2.2",
+    "EG.3.2-27", "3.5.2.2.1",
+    "EG.3.2-27", "3.6.2.2.1",
+    "EG.3.2-27", "3.7.2.2.1",
+    "EG.3.2-27", "3.5.2.2.2",
+    "EG.3.2-27", "3.6.2.2.2",
+    "EG.3.2-27", "3.7.2.2.2",
+    "EG.3.1-15",         "3",
+    "HL.9.1-d",         "3",
+    "EG.3.1-14",     "3.1.2"
+  )
+  drv <- DBI::dbDriver("SQLite")
+  tfile <- paste0("../data/", d)
+  if(!dir.exists(tfile)) dir.create(tfile)
+  con <- DBI::dbConnect(RSQLite::SQLite(), dbname = paste0(tfile, "/dis_extract.db"))
+  DBI::dbWriteTable(con, "extract", as.data.frame(data), overwrite = overwrite)
+  DBI::dbWriteTable(con, "pt_udns", as.data.frame(pt_udns), overwrite = overwrite)
+  DBI::dbDisconnect(con)
 }
-
-
-
-
