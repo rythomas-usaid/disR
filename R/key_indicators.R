@@ -192,7 +192,7 @@ priority_targets <- function(x) {
   ### gender_financing #####
   financing_udns <- c("3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2"    # value for females
                       , "3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2"  # number of females
-                      , "3.5.1.2.1", "3.6.1.2.1 ", "3.7.1.2.1" # value for males
+                      , "3.5.1.2.1", "3.6.1.2.1", "3.7.1.2.1" # value for males
                       , "3.5.2.2.1", "3.6.2.2.1", "3.7.2.2.1") # number of males
 
   gender_financing_raw <- x %>%
@@ -202,7 +202,7 @@ priority_targets <- function(x) {
     mutate(d_name = case_when(
       udn %in% c("3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2") ~ "Female Value"
       , udn %in% c("3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") ~ "Female Number"
-      , udn %in% c("3.5.1.2.1", "3.6.1.2.1 ", "3.7.1.2.1") ~ "Male Value"
+      , udn %in% c("3.5.1.2.1", "3.6.1.2.1", "3.7.1.2.1") ~ "Male Value"
       , udn %in% c("3.5.2.2.1", "3.6.2.2.1", "3.7.2.2.1") ~ "Male Number"))
 
   if(nrow(gender_financing_raw) > 0L) {
@@ -344,6 +344,22 @@ gender_financing_ <- function(x, level = "im") {
       # For RO
       group_by(ro, year, name) %>%
       summarize_financing_ratio(level = level)
+  } else if(level == "initiative") {
+    if(length(unique(x$ro)) == 1 ) {
+      ous <- unique(x$ou)
+      warning(paste("Input data contains only one unique reporting organization. Results are for the following OUs:", paste(ous, collapse = ",")))
+    }
+    gender_financing <- x %>%
+      get_im_financing_ratio() %>%
+      # For OU
+      group_by(ro, ou, year, name) %>%
+      summarize_financing_ratio(level = level) %>%
+      # For RO
+      group_by(ro, year, name) %>%
+      summarize_financing_ratio(level = level) %>%
+      # For initiative
+      group_by(year, name) %>%
+      summarize_financing_ratio(level = level)
   }
   return(gender_financing)
 }
@@ -433,6 +449,60 @@ psi_ <- function(x, level = "ou", max_year = year(Sys.Date())) {
                          , .after = actual) %>%
     select(-contains("lag")) %>%
     pivot_longer(starts_with(c("target", "actual")))
+  } else if(level == "ro") {
+    psi <- x %>%
+      select(ro, ou, a_name, a_code, ic, udn
+             , year, d_name, target, actual) %>%
+      filter((year >=2022 & ic == "EG.3.1-15" & udn == "3") |
+               (year < 2022  & ic == "EG.3.1-14" & udn == "3.1.2")) %>%
+      mutate(ic = "EG.3.1-15/-14") %>%
+      # RAW ABOVE. perhaps split out later
+      # pivot_longer(c(target, actual)) %>%
+      group_by(ro, ic, year) %>%
+      summarise(target = sum_(target)
+                , actual = sum_(actual)
+                , a_codes = paste0(unique(a_code), collapse="; ")
+                , .groups = "drop") %>%
+      # psi_() %>%
+      # filter(name == "actual") %>% #select(-c(a_codes, name)) %>%
+      group_by(ro, ic) %>%
+      complete(year = first(year):year(Sys.Date())) %>%
+      mutate(actual.lag.2 = lag(actual, n=2, order_by = year),
+             actual.lag.1 = lag(actual, n=1, order_by = year),
+             target.lag.2 = lag(target, n=2, order_by = year),
+             target.lag.1 = lag(target, n=1, order_by = year)) %>%
+      rowwise() %>% mutate(actual_3y = mean(c(actual, actual.lag.1, actual.lag.2), na.rm=T)
+                           , target_3y = mean(c(target, actual.lag.1, actual.lag.2), na.rm=T)
+                           , .after = actual) %>%
+      select(-contains("lag")) %>%
+      pivot_longer(starts_with(c("target", "actual")))
+  } else if(level == "initiative") {
+    psi <- x %>%
+      select(ro, ou, a_name, a_code, ic, udn
+             , year, d_name, target, actual) %>%
+      filter((year >=2022 & ic == "EG.3.1-15" & udn == "3") |
+               (year < 2022  & ic == "EG.3.1-14" & udn == "3.1.2")) %>%
+      mutate(ic = "EG.3.1-15/-14") %>%
+      # RAW ABOVE. perhaps split out later
+      # pivot_longer(c(target, actual)) %>%
+      group_by(ic, year) %>%
+      summarise(target = sum_(target)
+                , actual = sum_(actual)
+                , a_codes = paste0(unique(a_code), collapse="; ")
+                , .groups = "drop") %>%
+      # psi_() %>%
+      # filter(name == "actual") %>% #select(-c(a_codes, name)) %>%
+      group_by(ic) %>%
+      complete(year = first(year):year(Sys.Date())) %>%
+      mutate(actual.lag.2 = lag(actual, n=2, order_by = year),
+             actual.lag.1 = lag(actual, n=1, order_by = year),
+             target.lag.2 = lag(target, n=2, order_by = year),
+             target.lag.1 = lag(target, n=1, order_by = year)) %>%
+      rowwise() %>% mutate(actual_3y = mean(c(actual, actual.lag.1, actual.lag.2), na.rm=T)
+                           , target_3y = mean(c(target, actual.lag.1, actual.lag.2), na.rm=T)
+                           , .after = actual) %>%
+      select(-contains("lag")) %>%
+      pivot_longer(starts_with(c("target", "actual")))
   }
 
   return(psi)
@@ -457,7 +527,7 @@ mddw_ <- function(x) {
 get_im_financing_ratio <- function(x){
   # if( ! all(col_names %in% names(x))) stop("! Check column names.")
   ### gender_financing_udns ###
-  financing_udns <- c("3.5.1.2.1", "3.6.1.2.1 ", "3.7.1.2.1"   # value for males
+  financing_udns <- c("3.5.1.2.1", "3.6.1.2.1", "3.7.1.2.1"   # value for males
                       , "3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2"  # value for females
                       , "3.5.2.2.1", "3.6.2.2.1", "3.7.2.2.1"  # number of males
                       , "3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") # number of females
@@ -467,7 +537,7 @@ get_im_financing_ratio <- function(x){
     mutate(d_name = case_when(
       udn %in% c("3.5.1.2.2", "3.6.1.2.2", "3.7.1.2.2") ~ "Female Value"
       , udn %in% c("3.5.2.2.2", "3.6.2.2.2", "3.7.2.2.2") ~ "Female Number"
-      , udn %in% c("3.5.1.2.1", "3.6.1.2.1 ", "3.7.1.2.1") ~ "Male Value"
+      , udn %in% c("3.5.1.2.1", "3.6.1.2.1", "3.7.1.2.1") ~ "Male Value"
       , udn %in% c("3.5.2.2.1", "3.6.2.2.1", "3.7.2.2.1") ~ "Male Number")) %>%
     pivot_longer(c(target, actual))  %>%
     select(-c(udn,ic)) %>%
@@ -488,15 +558,28 @@ get_im_financing_ratio <- function(x){
 summarize_financing_ratio <- function(x, level) {
   if (level == "im") stop("ERROR: Cannot summarize IM level.")
   # ---------- Additional summarizing from above IM-level
-  x %>%
-    summarise(`Female Value` = sum_(`Female Value`)
-              , `Female Number` = sum_(`Female Number`)
-              , `Male Value` = sum_(`Male Value`)
-              , `Male Number` = sum_(`Male Number`)
-              , `Female Per Person` = `Female Value` / `Female Number`
-              , `Male Per Person` = `Male Value` / `Male Number`
-              , value = (sum_(`Female Value`) / sum_(`Female Number`)) / ( sum_(`Male Value`) / sum_(`Male Number`))
-              , a_codes = paste0(unique(a_code), collapse="; ")
-              , .groups = "drop")
+  if ("a_code" %in% names(x)) {
+    x %>%
+      summarise(`Female Value` = sum_(`Female Value`)
+                , `Female Number` = sum_(`Female Number`)
+                , `Male Value` = sum_(`Male Value`)
+                , `Male Number` = sum_(`Male Number`)
+                , `Female Per Person` = `Female Value` / `Female Number`
+                , `Male Per Person` = `Male Value` / `Male Number`
+                , value = (sum_(`Female Value`) / sum_(`Female Number`)) / ( sum_(`Male Value`) / sum_(`Male Number`))
+                , a_codes = paste0(unique(a_code), collapse="; ")
+                , .groups = "drop")
+  } else if ("a_codes" %in% names(x)) {
+    x %>%
+      summarise(`Female Value` = sum_(`Female Value`)
+                , `Female Number` = sum_(`Female Number`)
+                , `Male Value` = sum_(`Male Value`)
+                , `Male Number` = sum_(`Male Number`)
+                , `Female Per Person` = `Female Value` / `Female Number`
+                , `Male Per Person` = `Male Value` / `Male Number`
+                , value = (sum_(`Female Value`) / sum_(`Female Number`)) / ( sum_(`Male Value`) / sum_(`Male Number`))
+                , a_codes = paste0(unique(unlist(strsplit(a_codes, split = "; "))), collapse="; ")
+                , .groups = "drop")
+  }
 }
 
